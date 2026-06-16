@@ -64,7 +64,7 @@ Everything runs on a **single PostgreSQL + pgvector** instance — graph travers
 
 | Layer     | Tech                                                 |
 | --------- | ---------------------------------------------------- |
-| Frontend  | React + TypeScript + Vite, D3.js (graph + timeline)  |
+| Frontend  | React + TypeScript + Vite, React Charts (graph + timeline)  |
 | Backend   | FastAPI (Python 3.11+), LangGraph                    |
 | Datastore | PostgreSQL 16 + pgvector                             |
 | AI        | Configurable LLM + embedding provider                |
@@ -77,7 +77,7 @@ Everything runs on a **single PostgreSQL + pgvector** instance — graph travers
 ```
 trace/
 ├── backend/        FastAPI: ingestion, graph, semantic, retrieval, reasoning, api
-├── frontend/       React + Vite: query panel, D3 graph view, timeline, evidence panel
+├── frontend/       React + Vite: query panel, graph view, timeline, evidence panel
 ├── eval/           hand-labeled QA set + RAGAS harness (baseline vs graph)
 ├── docs/           PRD
 └── docker-compose.yml
@@ -119,4 +119,8 @@ Runs the QA set through both baseline vector RAG and the graph-augmented pipelin
 
 ## License
 
-MIT
+Proprietary — All Rights Reserved
+
+This repository is publicly visible for portfolio and evaluation purposes only.
+
+No permission is granted to use, copy, modify, distribute, sublicense, or create derivative works from this code without explicit written permission from the author.
