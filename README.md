@@ -4,7 +4,6 @@
 
 [CI](#)
 [Live demo](#)
-[License: MIT](#)
 
 **Live demo:** *add URL* · **Writeup:** *add link*
 
