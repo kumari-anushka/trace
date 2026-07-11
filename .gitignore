@@ -1,86 +1,21 @@
+# macOS
+.DS_Store
+
 # Python
-
-**pycache**/
-*.py[cod]
-*$py.class
-
-# Virtual environments
-
-venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .venv/
-env/
 
-# Environment variables
+# Node
+node_modules/
+dist/
 
+# Env
 .env
 .env.*
 
 # IDE
-
 .vscode/
 .idea/
-
-# macOS
-
-.DS_Store
-
-# Logs
-
-*.log
-
-# Coverage
-
-.coverage
-htmlcov/
-.pytest_cache/
-
-# Alembic
-
-alembic/versions/*.pyc
-
-# Build artifacts
-
-build/
-dist/
-
-# Frontend
-
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
-
-# Backend
-
-backend/.pytest_cache/
-backend/.mypy_cache/
-
-# PostgreSQL
-
-postgres_data/
-
-# Docker
-
-docker-compose.override.yml
-
-# Jupyter
-
-.ipynb_checkpoints/
-
-# ML / embeddings
-
-*.faiss
-*.index
-*.bin
-*.pt
-*.pth
-*.onnx
-
-# Evaluation outputs
-
-eval/results/
-
-# Local databases
-
-*.db
-*.sqlite
-*.sqlite3
