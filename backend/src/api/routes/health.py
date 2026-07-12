@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.cache.redis import redis_client
 from src.db.session import get_db_session
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(prefix="/health", tags=["Health"])
 
 DatabaseSession = Annotated[
     AsyncSession,

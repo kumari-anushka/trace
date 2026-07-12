@@ -13,6 +13,6 @@ app = FastAPI(
 app.include_router(health_router)
 
 
-@app.get("/")
+@app.get("/", tags=["Root"])
 async def root() -> dict[str, str]:
     return {"message": "Trace API"}
