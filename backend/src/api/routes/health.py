@@ -40,3 +40,15 @@ async def redis_health_check() -> dict[str, str]:
         "status": "ok",
         "redis": "connected",
     }
+
+
+@router.get("/ready")
+async def readiness_check(session: DatabaseSession) -> dict[str, str]:
+    await session.execute(text("SELECT 1"))
+    await redis_client.ping()
+
+    return {
+        "status": "ok",
+        "database": "connected",
+        "redis": "connected",
+    }
