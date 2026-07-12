@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.15.21
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -13,9 +13,10 @@ repos:
     hooks:
       - id: backend-mypy
         name: Backend mypy
-        entry: uv run --project backend mypy backend
+        entry: bash -c 'cd backend && uv run mypy .'
         language: system
         pass_filenames: false
+        files: ^backend/
 
       - id: frontend-format
         name: Frontend Prettier
