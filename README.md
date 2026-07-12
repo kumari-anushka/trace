@@ -14,12 +14,6 @@ A Software Atlas helps users understand:
 - contributor activity
 - evidence-backed answers
 
-## Why Trace?
-
-Repository knowledge is scattered across code, issues, pull requests, commits, releases, and discussions.
-
-Trace connects these artifacts into one explorable system instead of forcing users to rebuild the mental model manually.
-
 ## Core Flow
 
 ```text
@@ -38,7 +32,7 @@ Embeddings + AI Analysis
 Software Atlas
 ```
 
-## Software Atlas
+## Atlas Sections
 
 ```text
 Overview
@@ -51,7 +45,7 @@ Explore
 Ask
 ```
 
-Every inferred result includes:
+Every inferred result must include:
 
 - confidence
 - supporting evidence
@@ -59,7 +53,7 @@ Every inferred result includes:
 
 ## Tech Stack
 
-### Frontend
+**Frontend**
 
 - React
 - TypeScript
@@ -68,7 +62,7 @@ Every inferred result includes:
 - Cytoscape.js
 - react-chartjs-2
 
-### Backend
+**Backend**
 
 - Python 3.13
 - FastAPI
@@ -77,7 +71,7 @@ Every inferred result includes:
 - NetworkX
 - LangGraph
 
-### Data and Infrastructure
+**Data and Infra**
 
 - PostgreSQL
 - pgvector
@@ -85,24 +79,13 @@ Every inferred result includes:
 - Docker Compose
 - GitHub Actions
 
-## Current Status
+## Current Scope
 
-Under active development.
+MVP includes:
 
-Current foundation:
-
-- frontend and backend setup
-- PostgreSQL and Redis
-- Docker Compose
-- CI
-- linting, typing, and tests
-- product and architecture documentation
-
-Planned MVP:
-
-- public GitHub repository ingestion
+- public GitHub repositories
+- Python, TypeScript, and JavaScript analysis
 - deterministic repository graph
-- source parsing for Python, TypeScript, and JavaScript
 - subsystem discovery
 - decision extraction
 - contributor intelligence
@@ -110,13 +93,20 @@ Planned MVP:
 - cited AI answers
 - evaluation against retrieval baselines
 
+MVP excludes:
+
+- authentication
+- private repositories
+- billing
+- code generation
+- automatic code edits
+- Neo4j
+
 ## Run Locally
 
 ```bash
 docker compose up --build
 ```
-
-Services:
 
 ```text
 Frontend: http://localhost:5173
@@ -143,19 +133,10 @@ docker compose down
 - [`docs/ux.md`](docs/ux.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 
-## Research Direction
+## Research Question
 
-Trace compares:
+> Does an adaptive graph-augmented Software Atlas improve unfamiliar-repository understanding compared with vector-only retrieval?
 
-- keyword retrieval
-- vector-only RAG
-- graph-only retrieval
-- adaptive hybrid retrieval
+## Status
 
-Main research question:
-
-> Does a graph-augmented Software Atlas improve unfamiliar-repository understanding compared with vector-only retrieval?
-
-## License
-
-License not selected yet.
+Under active development.
