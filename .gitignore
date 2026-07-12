@@ -14,7 +14,6 @@ dist/
 
 # Env
 .env
-.env.*
 
 # IDE
 .vscode/
