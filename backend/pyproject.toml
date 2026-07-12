@@ -13,7 +13,7 @@ dependencies = [
     "pydantic-settings>=2.14.2",
     "redis>=8.0.1",
     "sqlalchemy>=2.0.51",
-    "uvicorn>=0.51.0",
+    "uvicorn[standard]>=0.51.0",
 ]
 
 [dependency-groups]
@@ -45,6 +45,12 @@ select = [
 [tool.mypy]
 python_version = "3.13"
 strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
