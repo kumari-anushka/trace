@@ -65,8 +65,8 @@ Everything runs on a **single PostgreSQL + pgvector** instance — graph travers
 | Layer     | Tech                                                 |
 | --------- | ---------------------------------------------------- |
 | Frontend  | React + TypeScript + Vite, React Charts (graph + timeline)  |
-| Backend   | FastAPI (Python 3.11+), LangGraph                    |
-| Datastore | PostgreSQL 16 + pgvector                             |
+| Backend   | FastAPI (Python>=3.13), LangGraph                    |
+| Datastore | PostgreSQL 17 + pgvector                             |
 | AI        | Configurable LLM + embedding provider                |
 | Eval      | RAGAS                                                |
 | Infra     | Docker Compose, GitHub Actions (lint · test · build) |
@@ -80,7 +80,7 @@ trace/
 ├── frontend/       React + Vite: query panel, graph view, timeline, evidence panel
 ├── eval/           hand-labeled QA set + RAGAS harness (baseline vs graph)
 ├── docs/           PRD
-└── docker-compose.yml
+└── compose.yaml
 ```
 
 ## Getting started
