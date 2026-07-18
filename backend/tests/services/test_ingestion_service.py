@@ -33,7 +33,6 @@ def repository() -> Repository:
         github_url="https://github.com/kumari-anushka/trace",
         owner="kumari-anushka",
         name="trace",
-        default_branch="main",
     )
 
 

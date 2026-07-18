@@ -8,7 +8,6 @@ from src.schemas.repository_snapshot import RepositorySnapshotResponse
 
 class RepositoryCreate(BaseModel):
     github_url: HttpUrl
-    default_branch: str
 
 
 class RepositoryResponse(BaseModel):
@@ -18,7 +17,6 @@ class RepositoryResponse(BaseModel):
     owner: str
     name: str
     github_url: str
-    default_branch: str
     created_at: datetime
 
 

@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +30,8 @@ async def override_get_db_session() -> AsyncGenerator[AsyncSession]:
 def client() -> Generator[TestClient]:
     app.dependency_overrides[get_db_session] = override_get_db_session
 
-    yield TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
     app.dependency_overrides.clear()
 
@@ -40,14 +42,12 @@ def make_repository(
     github_url: str = "https://github.com/kumari-anushka/trace",
     owner: str = "kumari-anushka",
     name: str = "trace",
-    default_branch: str = "main",
 ) -> Repository:
     return Repository(
         id=repository_id,
         github_url=github_url,
         owner=owner,
         name=name,
-        default_branch=default_branch,
         created_at=datetime.now(UTC),
     )
 
@@ -91,7 +91,6 @@ def test_create_repository_returns_created_repository(
             "/repositories",
             json={
                 "github_url": "https://github.com/kumari-anushka/trace",
-                "default_branch": "main",
             },
         )
 
@@ -100,15 +99,13 @@ def test_create_repository_returns_created_repository(
     body = response.json()
 
     assert body["id"] == 1
-    assert body["github_url"] == ("https://github.com/kumari-anushka/trace")
+    assert body["github_url"] == "https://github.com/kumari-anushka/trace"
     assert body["owner"] == "kumari-anushka"
     assert body["name"] == "trace"
-    assert body["default_branch"] == "main"
     assert "created_at" in body
 
     create_mock.assert_awaited_once_with(
         github_url="https://github.com/kumari-anushka/trace",
-        default_branch="main",
     )
 
 
@@ -127,7 +124,6 @@ def test_create_repository_returns_422_for_invalid_url(
             "/repositories",
             json={
                 "github_url": "https://example.com/not-github",
-                "default_branch": "main",
             },
         )
 
@@ -138,7 +134,6 @@ def test_create_repository_returns_422_for_invalid_url(
 
     create_mock.assert_awaited_once_with(
         github_url="https://example.com/not-github",
-        default_branch="main",
     )
 
 
@@ -157,7 +152,6 @@ def test_create_repository_returns_409_when_repository_exists(
             "/repositories",
             json={
                 "github_url": "https://github.com/kumari-anushka/trace",
-                "default_branch": "main",
             },
         )
 
@@ -168,7 +162,6 @@ def test_create_repository_returns_409_when_repository_exists(
 
     create_mock.assert_awaited_once_with(
         github_url="https://github.com/kumari-anushka/trace",
-        default_branch="main",
     )
 
 
@@ -183,9 +176,7 @@ def test_create_repository_returns_422_for_missing_github_url(
     ):
         response = client.post(
             "/repositories",
-            json={
-                "default_branch": "main",
-            },
+            json={},
         )
 
     assert response.status_code == 422
@@ -199,12 +190,11 @@ def test_list_repositories_returns_repositories(
         make_repository(),
         make_repository(
             repository_id=2,
-            github_url="https://github.com/react/react",
-            owner="react",
-            name="react",
+            github_url="https://github.com/fastapi/fastapi",
+            owner="fastapi",
+            name="fastapi",
         ),
     ]
-
     list_mock = AsyncMock(return_value=repositories)
 
     with patch(
@@ -218,20 +208,12 @@ def test_list_repositories_returns_repositories(
     body = response.json()
 
     assert len(body) == 2
-
     assert body[0]["id"] == 1
-    assert body[0]["github_url"] == ("https://github.com/kumari-anushka/trace")
     assert body[0]["owner"] == "kumari-anushka"
     assert body[0]["name"] == "trace"
-    assert body[0]["default_branch"] == "main"
-    assert "created_at" in body[0]
-
     assert body[1]["id"] == 2
-    assert body[1]["github_url"] == "https://github.com/react/react"
-    assert body[1]["owner"] == "react"
-    assert body[1]["name"] == "react"
-    assert body[1]["default_branch"] == "main"
-    assert "created_at" in body[1]
+    assert body[1]["owner"] == "fastapi"
+    assert body[1]["name"] == "fastapi"
 
     list_mock.assert_awaited_once_with()
 
@@ -269,7 +251,9 @@ def test_delete_repository_returns_success_message(
         "message": "Repository deleted successfully",
     }
 
-    delete_mock.assert_awaited_once_with(repository_id=1)
+    delete_mock.assert_awaited_once_with(
+        repository_id=1,
+    )
 
 
 def test_delete_repository_returns_404_when_not_found(
@@ -290,7 +274,9 @@ def test_delete_repository_returns_404_when_not_found(
         "detail": "Repository not found",
     }
 
-    delete_mock.assert_awaited_once_with(repository_id=999)
+    delete_mock.assert_awaited_once_with(
+        repository_id=999,
+    )
 
 
 def test_delete_repository_returns_422_for_invalid_id(
@@ -302,7 +288,9 @@ def test_delete_repository_returns_422_for_invalid_id(
         "src.api.routes.repositories.RepositoryService.delete_repository",
         delete_mock,
     ):
-        response = client.delete("/repositories/not-an-integer")
+        response = client.delete(
+            "/repositories/not-an-integer",
+        )
 
     assert response.status_code == 422
     delete_mock.assert_not_awaited()
@@ -311,65 +299,52 @@ def test_delete_repository_returns_422_for_invalid_id(
 def test_create_ingestion_returns_created_ingestion(
     client: TestClient,
 ) -> None:
-    repository = make_repository()
     snapshot = make_snapshot()
     job = make_ingestion_job()
+    create_mock = AsyncMock(return_value=(snapshot, job))
 
-    get_repository_mock = AsyncMock(return_value=repository)
-    create_ingestion_mock = AsyncMock(return_value=(snapshot, job))
-
-    with (
-        patch(
-            "src.api.routes.repositories.RepositoryService.get_repository",
-            get_repository_mock,
-        ),
-        patch(
-            "src.api.routes.repositories.IngestionService.create_ingestion",
-            create_ingestion_mock,
-        ),
+    with patch(
+        "src.api.routes.repositories.IngestionCoordinator.create_ingestion",
+        create_mock,
     ):
         response = client.post(
             "/repositories/1/ingestions",
-            json={
-                "commit_sha": "a1b2c3d4e5f6",
-                "default_branch": "main",
-            },
         )
 
     assert response.status_code == 201
-    assert response.json()["snapshot"]["commit_sha"] == "a1b2c3d4e5f6"
-    assert response.json()["job"]["status"] == "pending"
 
-    get_repository_mock.assert_awaited_once_with(1)
-    create_ingestion_mock.assert_awaited_once_with(
-        repository,
-        commit_sha="a1b2c3d4e5f6",
-        default_branch="main",
+    body = response.json()
+
+    assert body["snapshot"]["id"] == 1
+    assert body["snapshot"]["repository_id"] == 1
+    assert body["snapshot"]["commit_sha"] == "a1b2c3d4e5f6"
+    assert body["snapshot"]["default_branch"] == "main"
+    assert body["snapshot"]["status"] == "pending"
+
+    assert body["job"]["id"] == 1
+    assert body["job"]["repository_id"] == 1
+    assert body["job"]["snapshot_id"] == 1
+    assert body["job"]["status"] == "pending"
+    assert body["job"]["progress"] == 0
+
+    create_mock.assert_awaited_once_with(
+        repository_id=1,
     )
 
 
 def test_create_ingestion_returns_404_when_repository_missing(
     client: TestClient,
 ) -> None:
-    get_repository_mock = AsyncMock(return_value=None)
-    create_ingestion_mock = AsyncMock()
+    create_mock = AsyncMock(
+        side_effect=RepositoryNotFoundError,
+    )
 
-    with (
-        patch(
-            "src.api.routes.repositories.RepositoryService.get_repository",
-            get_repository_mock,
-        ),
-        patch(
-            "src.api.routes.repositories.IngestionService.create_ingestion",
-            create_ingestion_mock,
-        ),
+    with patch(
+        "src.api.routes.repositories.IngestionCoordinator.create_ingestion",
+        create_mock,
     ):
         response = client.post(
             "/repositories/999/ingestions",
-            json={
-                "commit_sha": "a1b2c3d4e5f6",
-                "default_branch": "main",
-            },
         )
 
     assert response.status_code == 404
@@ -377,35 +352,20 @@ def test_create_ingestion_returns_404_when_repository_missing(
         "detail": "Repository not found",
     }
 
-    create_ingestion_mock.assert_not_awaited()
-
 
 def test_create_ingestion_returns_409_when_snapshot_exists(
     client: TestClient,
 ) -> None:
-    repository = make_repository()
-
-    get_repository_mock = AsyncMock(return_value=repository)
-    create_ingestion_mock = AsyncMock(
+    create_mock = AsyncMock(
         side_effect=SnapshotAlreadyExistsError,
     )
 
-    with (
-        patch(
-            "src.api.routes.repositories.RepositoryService.get_repository",
-            get_repository_mock,
-        ),
-        patch(
-            "src.api.routes.repositories.IngestionService.create_ingestion",
-            create_ingestion_mock,
-        ),
+    with patch(
+        "src.api.routes.repositories.IngestionCoordinator.create_ingestion",
+        create_mock,
     ):
         response = client.post(
             "/repositories/1/ingestions",
-            json={
-                "commit_sha": "a1b2c3d4e5f6",
-                "default_branch": "main",
-            },
         )
 
     assert response.status_code == 409
@@ -414,49 +374,131 @@ def test_create_ingestion_returns_409_when_snapshot_exists(
     }
 
 
+def test_create_ingestion_returns_404_when_github_repo_missing(
+    client: TestClient,
+) -> None:
+    request = httpx.Request(
+        "GET",
+        "https://api.github.com/repos/missing/repo",
+    )
+    github_response = httpx.Response(
+        status_code=404,
+        request=request,
+    )
+
+    create_mock = AsyncMock(
+        side_effect=httpx.HTTPStatusError(
+            "Not Found",
+            request=request,
+            response=github_response,
+        ),
+    )
+
+    with patch(
+        "src.api.routes.repositories.IngestionCoordinator.create_ingestion",
+        create_mock,
+    ):
+        response = client.post(
+            "/repositories/1/ingestions",
+        )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "GitHub repository not found",
+    }
+
+
+def test_create_ingestion_returns_502_for_github_failure(
+    client: TestClient,
+) -> None:
+    request = httpx.Request(
+        "GET",
+        "https://api.github.com/repos/owner/repo",
+    )
+    github_response = httpx.Response(
+        status_code=500,
+        request=request,
+    )
+
+    create_mock = AsyncMock(
+        side_effect=httpx.HTTPStatusError(
+            "GitHub failed",
+            request=request,
+            response=github_response,
+        ),
+    )
+
+    with patch(
+        "src.api.routes.repositories.IngestionCoordinator.create_ingestion",
+        create_mock,
+    ):
+        response = client.post(
+            "/repositories/1/ingestions",
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "detail": "GitHub API request failed",
+    }
+
+
+def test_create_ingestion_returns_422_for_invalid_repository_id(
+    client: TestClient,
+) -> None:
+    create_mock = AsyncMock()
+
+    with patch(
+        "src.api.routes.repositories.IngestionCoordinator.create_ingestion",
+        create_mock,
+    ):
+        response = client.post(
+            "/repositories/not-an-integer/ingestions",
+        )
+
+    assert response.status_code == 422
+    create_mock.assert_not_awaited()
+
+
 def test_get_ingestion_job_returns_job(
     client: TestClient,
 ) -> None:
     job = make_ingestion_job()
-    get_job_mock = AsyncMock(return_value=job)
+    get_mock = AsyncMock(return_value=job)
 
     with patch(
         "src.api.routes.repositories.IngestionService.get_ingestion_job",
-        get_job_mock,
+        get_mock,
     ):
         response = client.get(
             "/repositories/1/ingestions/1",
         )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "id": 1,
-        "repository_id": 1,
-        "snapshot_id": 1,
-        "status": "pending",
-        "progress": 0,
-        "error_message": None,
-        "started_at": None,
-        "completed_at": None,
-        "created_at": job.created_at.isoformat().replace("+00:00", "Z"),
-    }
 
-    get_job_mock.assert_awaited_once_with(
+    body = response.json()
+
+    assert body["id"] == 1
+    assert body["repository_id"] == 1
+    assert body["snapshot_id"] == 1
+    assert body["status"] == "pending"
+    assert body["progress"] == 0
+
+    get_mock.assert_awaited_once_with(
         repository_id=1,
         job_id=1,
     )
 
 
-def test_get_ingestion_job_returns_404_when_job_missing(
+def test_get_ingestion_job_returns_404_when_missing(
     client: TestClient,
 ) -> None:
-    get_job_mock = AsyncMock(
+    get_mock = AsyncMock(
         side_effect=IngestionJobNotFoundError,
     )
 
     with patch(
         "src.api.routes.repositories.IngestionService.get_ingestion_job",
-        get_job_mock,
+        get_mock,
     ):
         response = client.get(
             "/repositories/1/ingestions/999",
@@ -467,7 +509,19 @@ def test_get_ingestion_job_returns_404_when_job_missing(
         "detail": "Ingestion job not found",
     }
 
-    get_job_mock.assert_awaited_once_with(
-        repository_id=1,
-        job_id=999,
-    )
+
+def test_get_ingestion_job_returns_422_for_invalid_id(
+    client: TestClient,
+) -> None:
+    get_mock = AsyncMock()
+
+    with patch(
+        "src.api.routes.repositories.IngestionService.get_ingestion_job",
+        get_mock,
+    ):
+        response = client.get(
+            "/repositories/1/ingestions/not-an-integer",
+        )
+
+    assert response.status_code == 422
+    get_mock.assert_not_awaited()

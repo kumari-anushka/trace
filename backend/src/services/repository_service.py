@@ -21,7 +21,6 @@ class RepositoryService:
         self,
         *,
         github_url: str,
-        default_branch: str,
     ) -> Repository:
         normalized_url, owner, name = self._parse_github_url(github_url)
 
@@ -37,7 +36,6 @@ class RepositoryService:
                 github_url=normalized_url,
                 owner=owner,
                 name=name,
-                default_branch=default_branch.strip(),
             )
         except IntegrityError:
             await self.session.rollback()

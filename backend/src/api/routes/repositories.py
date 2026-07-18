@@ -1,5 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
 
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from src.api.dependencies.ingestion import get_ingestion_coordinator
 from src.core.exceptions import (
     IngestionJobNotFoundError,
     InvalidGitHubRepositoryURLError,
@@ -10,12 +14,12 @@ from src.core.exceptions import (
 from src.db.dependencies import DatabaseSession
 from src.models.repository import Repository
 from src.schemas.ingestion import (
-    IngestionCreate,
     IngestionJobResponse,
     IngestionResponse,
     RepositorySnapshotResponse,
 )
 from src.schemas.repository import RepositoryCreate, RepositoryDeleteResponse, RepositoryResponse
+from src.services.ingestion_coordinator import IngestionCoordinator
 from src.services.ingestion_service import IngestionService
 from src.services.repository_service import RepositoryService
 
@@ -39,7 +43,6 @@ async def create_repository(
     try:
         return await service.create_repository(
             github_url=str(payload.github_url),
-            default_branch=payload.default_branch,
         )
     except InvalidGitHubRepositoryURLError as exc:
         raise HTTPException(
@@ -83,30 +86,43 @@ async def delete_repository(
 )
 async def create_ingestion(
     repository_id: int,
-    payload: IngestionCreate,
-    session: DatabaseSession,
+    coordinator: Annotated[
+        IngestionCoordinator,
+        Depends(get_ingestion_coordinator),
+    ],
 ) -> IngestionResponse:
-    repository_service = RepositoryService(session)
-    repository = await repository_service.get_repository(repository_id)
-
-    if repository is None:
+    try:
+        snapshot, job = await coordinator.create_ingestion(
+            repository_id=repository_id,
+        )
+    except RepositoryNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Repository not found",
-        )
-
-    ingestion_service = IngestionService(session)
-
-    try:
-        snapshot, job = await ingestion_service.create_ingestion(
-            repository,
-            commit_sha=payload.commit_sha,
-            default_branch=payload.default_branch,
-        )
+        ) from error
     except SnapshotAlreadyExistsError as error:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Snapshot already exists",
+        ) from error
+    except httpx.HTTPStatusError as error:
+        github_status_code = error.response.status_code
+
+        if github_status_code == 404:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="GitHub repository not found",
+            ) from error
+
+        if github_status_code == 403:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="GitHub API request forbidden or rate limited",
+            ) from error
+
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="GitHub API request failed",
         ) from error
 
     return IngestionResponse(

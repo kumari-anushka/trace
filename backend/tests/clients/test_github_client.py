@@ -21,6 +21,7 @@ async def test_get_repository_returns_repository_data() -> None:
                 "name": "trace",
                 "full_name": "kumari-anushka/trace",
                 "default_branch": "main",
+                "private": False,
             },
         )
 
@@ -37,12 +38,11 @@ async def test_get_repository_returns_repository_data() -> None:
             name="trace",
         )
 
-    assert result == {
-        "id": 123,
-        "name": "trace",
-        "full_name": "kumari-anushka/trace",
-        "default_branch": "main",
-    }
+    assert result.id == 123
+    assert result.name == "trace"
+    assert result.full_name == "kumari-anushka/trace"
+    assert result.default_branch == "main"
+    assert result.private is False
 
 
 @pytest.mark.asyncio
@@ -77,7 +77,13 @@ async def test_get_repository_sends_github_token() -> None:
 
         return httpx.Response(
             status_code=200,
-            json={"id": 1},
+            json={
+                "id": 1,
+                "name": "trace",
+                "full_name": "kumari-anushka/trace",
+                "default_branch": "main",
+                "private": False,
+            },
         )
 
     transport = httpx.MockTransport(handler)
@@ -91,7 +97,9 @@ async def test_get_repository_sends_github_token() -> None:
             github_token=SecretStr("test-token"),
         )
 
-        await github_client.get_repository(
+        result = await github_client.get_repository(
             owner="kumari-anushka",
             name="trace",
         )
+
+    assert result.id == 1

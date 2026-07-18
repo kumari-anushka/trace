@@ -1,6 +1,8 @@
 import httpx
 from pydantic import SecretStr
 
+from src.schemas.github import GitHubCommitMetadata, GitHubRepositoryMetadata
+
 
 class GitHubClient:
     def __init__(
@@ -17,14 +19,8 @@ class GitHubClient:
         *,
         owner: str,
         name: str,
-    ) -> dict[str, object]:
-        headers: dict[str, str] = {
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        }
-
-        if self.github_token is not None:
-            headers["Authorization"] = f"Bearer {self.github_token.get_secret_value()}"
+    ) -> GitHubRepositoryMetadata:
+        headers = self._build_headers()
 
         response = await self.client.get(
             f"/repos/{owner}/{name}",
@@ -32,5 +28,34 @@ class GitHubClient:
         )
         response.raise_for_status()
 
-        data: dict[str, object] = response.json()
-        return data
+        return GitHubRepositoryMetadata.model_validate(
+            response.json(),
+        )
+
+    async def get_commit(
+        self,
+        *,
+        owner: str,
+        name: str,
+        ref: str,
+    ) -> GitHubCommitMetadata:
+        response = await self.client.get(
+            f"/repos/{owner}/{name}/commits/{ref}",
+            headers=self._build_headers(),
+        )
+        response.raise_for_status()
+
+        return GitHubCommitMetadata.model_validate(
+            response.json(),
+        )
+
+    def _build_headers(self) -> dict[str, str]:
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+        if self.github_token is not None:
+            headers["Authorization"] = f"Bearer {self.github_token.get_secret_value()}"
+
+        return headers

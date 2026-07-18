@@ -1,13 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from src.models.enums import IngestionJobStatus, SnapshotStatus
-
-
-class IngestionCreate(BaseModel):
-    commit_sha: str = Field(min_length=7, max_length=40)
-    default_branch: str = Field(min_length=1, max_length=255)
 
 
 class RepositorySnapshotResponse(BaseModel):
