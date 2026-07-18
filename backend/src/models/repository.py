@@ -13,14 +13,10 @@ class Repository(Base):
     github_url: Mapped[str] = mapped_column(
         String(500),
         unique=True,
-        index=True,
     )
     owner: Mapped[str] = mapped_column(String(255))
     name: Mapped[str] = mapped_column(String(255))
-    default_branch: Mapped[str] = mapped_column(
-        String(255),
-        default="main",
-    )
+    default_branch: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
