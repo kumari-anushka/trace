@@ -7,13 +7,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import (
+    IngestionJobNotFoundError,
     InvalidGitHubRepositoryURLError,
     RepositoryAlreadyExistsError,
     RepositoryNotFoundError,
+    SnapshotAlreadyExistsError,
 )
 from src.db.session import get_db_session
 from src.main import app
+from src.models.enums import IngestionJobStatus, SnapshotStatus
+from src.models.ingestion_job import IngestionJob
 from src.models.repository import Repository
+from src.models.repository_snapshot import RepositorySnapshot
 
 
 async def override_get_db_session() -> AsyncGenerator[AsyncSession]:
@@ -43,6 +48,31 @@ def make_repository(
         owner=owner,
         name=name,
         default_branch=default_branch,
+        created_at=datetime.now(UTC),
+    )
+
+
+def make_snapshot() -> RepositorySnapshot:
+    return RepositorySnapshot(
+        id=1,
+        repository_id=1,
+        commit_sha="a1b2c3d4e5f6",
+        default_branch="main",
+        status=SnapshotStatus.PENDING,
+        created_at=datetime.now(UTC),
+    )
+
+
+def make_ingestion_job() -> IngestionJob:
+    return IngestionJob(
+        id=1,
+        repository_id=1,
+        snapshot_id=1,
+        status=IngestionJobStatus.PENDING,
+        progress=0,
+        error_message=None,
+        started_at=None,
+        completed_at=None,
         created_at=datetime.now(UTC),
     )
 
@@ -276,3 +306,168 @@ def test_delete_repository_returns_422_for_invalid_id(
 
     assert response.status_code == 422
     delete_mock.assert_not_awaited()
+
+
+def test_create_ingestion_returns_created_ingestion(
+    client: TestClient,
+) -> None:
+    repository = make_repository()
+    snapshot = make_snapshot()
+    job = make_ingestion_job()
+
+    get_repository_mock = AsyncMock(return_value=repository)
+    create_ingestion_mock = AsyncMock(return_value=(snapshot, job))
+
+    with (
+        patch(
+            "src.api.routes.repositories.RepositoryService.get_repository",
+            get_repository_mock,
+        ),
+        patch(
+            "src.api.routes.repositories.IngestionService.create_ingestion",
+            create_ingestion_mock,
+        ),
+    ):
+        response = client.post(
+            "/repositories/1/ingestions",
+            json={
+                "commit_sha": "a1b2c3d4e5f6",
+                "default_branch": "main",
+            },
+        )
+
+    assert response.status_code == 201
+    assert response.json()["snapshot"]["commit_sha"] == "a1b2c3d4e5f6"
+    assert response.json()["job"]["status"] == "pending"
+
+    get_repository_mock.assert_awaited_once_with(1)
+    create_ingestion_mock.assert_awaited_once_with(
+        repository,
+        commit_sha="a1b2c3d4e5f6",
+        default_branch="main",
+    )
+
+
+def test_create_ingestion_returns_404_when_repository_missing(
+    client: TestClient,
+) -> None:
+    get_repository_mock = AsyncMock(return_value=None)
+    create_ingestion_mock = AsyncMock()
+
+    with (
+        patch(
+            "src.api.routes.repositories.RepositoryService.get_repository",
+            get_repository_mock,
+        ),
+        patch(
+            "src.api.routes.repositories.IngestionService.create_ingestion",
+            create_ingestion_mock,
+        ),
+    ):
+        response = client.post(
+            "/repositories/999/ingestions",
+            json={
+                "commit_sha": "a1b2c3d4e5f6",
+                "default_branch": "main",
+            },
+        )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "Repository not found",
+    }
+
+    create_ingestion_mock.assert_not_awaited()
+
+
+def test_create_ingestion_returns_409_when_snapshot_exists(
+    client: TestClient,
+) -> None:
+    repository = make_repository()
+
+    get_repository_mock = AsyncMock(return_value=repository)
+    create_ingestion_mock = AsyncMock(
+        side_effect=SnapshotAlreadyExistsError,
+    )
+
+    with (
+        patch(
+            "src.api.routes.repositories.RepositoryService.get_repository",
+            get_repository_mock,
+        ),
+        patch(
+            "src.api.routes.repositories.IngestionService.create_ingestion",
+            create_ingestion_mock,
+        ),
+    ):
+        response = client.post(
+            "/repositories/1/ingestions",
+            json={
+                "commit_sha": "a1b2c3d4e5f6",
+                "default_branch": "main",
+            },
+        )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Snapshot already exists",
+    }
+
+
+def test_get_ingestion_job_returns_job(
+    client: TestClient,
+) -> None:
+    job = make_ingestion_job()
+    get_job_mock = AsyncMock(return_value=job)
+
+    with patch(
+        "src.api.routes.repositories.IngestionService.get_ingestion_job",
+        get_job_mock,
+    ):
+        response = client.get(
+            "/repositories/1/ingestions/1",
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": 1,
+        "repository_id": 1,
+        "snapshot_id": 1,
+        "status": "pending",
+        "progress": 0,
+        "error_message": None,
+        "started_at": None,
+        "completed_at": None,
+        "created_at": job.created_at.isoformat().replace("+00:00", "Z"),
+    }
+
+    get_job_mock.assert_awaited_once_with(
+        repository_id=1,
+        job_id=1,
+    )
+
+
+def test_get_ingestion_job_returns_404_when_job_missing(
+    client: TestClient,
+) -> None:
+    get_job_mock = AsyncMock(
+        side_effect=IngestionJobNotFoundError,
+    )
+
+    with patch(
+        "src.api.routes.repositories.IngestionService.get_ingestion_job",
+        get_job_mock,
+    ):
+        response = client.get(
+            "/repositories/1/ingestions/999",
+        )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": "Ingestion job not found",
+    }
+
+    get_job_mock.assert_awaited_once_with(
+        repository_id=1,
+        job_id=999,
+    )

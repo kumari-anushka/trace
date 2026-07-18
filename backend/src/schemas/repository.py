@@ -1,22 +1,30 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, HttpUrl
+
+from src.schemas.ingestion import IngestionJobResponse
+from src.schemas.repository_snapshot import RepositorySnapshotResponse
 
 
 class RepositoryCreate(BaseModel):
     github_url: HttpUrl
-    default_branch: str = Field(min_length=1, max_length=255)
+    default_branch: str
 
 
 class RepositoryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
-    github_url: str
     owner: str
     name: str
+    github_url: str
     default_branch: str
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+
+class RepositoryDetailResponse(RepositoryResponse):
+    snapshots: list[RepositorySnapshotResponse]
+    ingestion_jobs: list[IngestionJobResponse]
 
 
 class RepositoryDeleteResponse(BaseModel):

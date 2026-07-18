@@ -43,6 +43,12 @@ class RepositoryService:
             await self.session.rollback()
             raise RepositoryAlreadyExistsError from None
 
+    async def get_repository(
+        self,
+        repository_id: int,
+    ) -> Repository | None:
+        return await self.repository_store.get_by_id(repository_id)
+
     async def list_repositories(self) -> list[Repository]:
         return await self.repository_store.list_all()
 

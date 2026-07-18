@@ -8,3 +8,23 @@ class InvalidGitHubRepositoryURLError(Exception):
 
 class RepositoryNotFoundError(Exception):
     pass
+
+
+class SnapshotAlreadyExistsError(Exception):
+    pass
+
+
+class IngestionJobNotFoundError(Exception):
+    pass
+
+
+class InvalidIngestionTransitionError(Exception):
+    pass
+
+
+class InvalidIngestionProgressError(Exception):
+    pass
+
+
+class RepositorySnapshotNotFoundError(Exception):
+    pass
