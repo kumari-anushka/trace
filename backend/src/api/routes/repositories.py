@@ -28,7 +28,8 @@ async def create_repository(
 
     try:
         return await service.create_repository(
-            str(payload.github_url),
+            github_url=str(payload.github_url),
+            default_branch=payload.default_branch,
         )
     except InvalidGitHubRepositoryURLError:
         raise HTTPException(

@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class RepositoryCreate(BaseModel):
     github_url: HttpUrl
+    default_branch: str = Field(min_length=1, max_length=255)
 
 
 class RepositoryResponse(BaseModel):
