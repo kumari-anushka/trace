@@ -34,7 +34,7 @@ async def create_repository(
         )
     except InvalidGitHubRepositoryURLError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid GitHub repository URL",
         ) from exc
     except RepositoryAlreadyExistsError as exc:
