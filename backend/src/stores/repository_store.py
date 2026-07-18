@@ -26,11 +26,13 @@ class RepositoryStore:
         github_url: str,
         owner: str,
         name: str,
+        default_branch: str,
     ) -> Repository:
         repository = Repository(
             github_url=github_url,
             owner=owner,
             name=name,
+            default_branch=default_branch,
         )
 
         self.session.add(repository)
