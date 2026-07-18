@@ -40,3 +40,15 @@ class RepositoryStore:
         await self.session.refresh(repository)
 
         return repository
+
+    async def list_all(self) -> list[Repository]:
+        statement = select(Repository).order_by(Repository.created_at.desc())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
+
+    async def get_by_id(self, repository_id: int) -> Repository | None:
+        return await self.session.get(Repository, repository_id)
+
+    async def delete(self, repository: Repository) -> None:
+        await self.session.delete(repository)
+        await self.session.commit()

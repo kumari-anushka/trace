@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exceptions import (
     InvalidGitHubRepositoryURLError,
     RepositoryAlreadyExistsError,
+    RepositoryNotFoundError,
 )
 from src.models.repository import Repository
 from src.stores.repository_store import RepositoryStore
@@ -41,6 +42,17 @@ class RepositoryService:
         except IntegrityError:
             await self.session.rollback()
             raise RepositoryAlreadyExistsError from None
+
+    async def list_repositories(self) -> list[Repository]:
+        return await self.repository_store.list_all()
+
+    async def delete_repository(self, repository_id: int) -> None:
+        repository = await self.repository_store.get_by_id(repository_id)
+
+        if repository is None:
+            raise RepositoryNotFoundError
+
+        await self.repository_store.delete(repository)
 
     @staticmethod
     def _parse_github_url(

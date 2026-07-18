@@ -4,3 +4,7 @@ class RepositoryAlreadyExistsError(Exception):
 
 class InvalidGitHubRepositoryURLError(Exception):
     pass
+
+
+class RepositoryNotFoundError(Exception):
+    pass

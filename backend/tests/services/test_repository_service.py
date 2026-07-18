@@ -5,6 +5,7 @@ import pytest
 from src.core.exceptions import (
     InvalidGitHubRepositoryURLError,
     RepositoryAlreadyExistsError,
+    RepositoryNotFoundError,
 )
 from src.models.repository import Repository
 from src.services.repository_service import RepositoryService
@@ -158,3 +159,107 @@ async def test_create_repository_rejects_duplicate(
         "https://github.com/kumari-anushka/trace",
     )
     create_mock.assert_not_awaited()
+
+
+async def test_list_repositories_returns_all_repositories(
+    service: RepositoryService,
+) -> None:
+    repositories = [
+        Repository(
+            id=2,
+            github_url="https://github.com/fastapi/fastapi",
+            owner="fastapi",
+            name="fastapi",
+            default_branch="master",
+        ),
+        Repository(
+            id=1,
+            github_url="https://github.com/kumari-anushka/trace",
+            owner="kumari-anushka",
+            name="trace",
+            default_branch="main",
+        ),
+    ]
+    list_all_mock = AsyncMock(return_value=repositories)
+
+    with patch.object(
+        service.repository_store,
+        "list_all",
+        list_all_mock,
+    ):
+        result = await service.list_repositories()
+
+    assert result == repositories
+    list_all_mock.assert_awaited_once_with()
+
+
+async def test_list_repositories_returns_empty_list(
+    service: RepositoryService,
+) -> None:
+    list_all_mock = AsyncMock(return_value=[])
+
+    with patch.object(
+        service.repository_store,
+        "list_all",
+        list_all_mock,
+    ):
+        result = await service.list_repositories()
+
+    assert result == []
+    list_all_mock.assert_awaited_once_with()
+
+
+async def test_delete_repository_deletes_existing_repository(
+    service: RepositoryService,
+) -> None:
+    repository = Repository(
+        id=1,
+        github_url="https://github.com/kumari-anushka/trace",
+        owner="kumari-anushka",
+        name="trace",
+        default_branch="main",
+    )
+    get_by_id_mock = AsyncMock(return_value=repository)
+    delete_mock = AsyncMock()
+
+    with (
+        patch.object(
+            service.repository_store,
+            "get_by_id",
+            get_by_id_mock,
+        ),
+        patch.object(
+            service.repository_store,
+            "delete",
+            delete_mock,
+        ),
+    ):
+        await service.delete_repository(1)
+
+    get_by_id_mock.assert_awaited_once_with(1)
+    delete_mock.assert_awaited_once_with(repository)
+
+
+async def test_delete_repository_rejects_missing_repository(
+    service: RepositoryService,
+) -> None:
+    get_by_id_mock = AsyncMock(return_value=None)
+    delete_mock = AsyncMock()
+
+    with (
+        patch.object(
+            service.repository_store,
+            "get_by_id",
+            get_by_id_mock,
+        ),
+        patch.object(
+            service.repository_store,
+            "delete",
+            delete_mock,
+        ),
+    ):
+        with pytest.raises(RepositoryNotFoundError):
+            await service.delete_repository(999)
+
+    get_by_id_mock.assert_awaited_once_with(999)
+    delete_mock.assert_not_awaited()
