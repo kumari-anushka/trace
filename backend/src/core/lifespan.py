@@ -8,8 +8,9 @@ from src.db.session import engine
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    yield
-
-    await redis_client.aclose()
-    await engine.dispose()
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    try:
+        yield
+    finally:
+        await redis_client.aclose()
+        await engine.dispose()
