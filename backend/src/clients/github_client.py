@@ -1,8 +1,6 @@
 import httpx
 from pydantic import SecretStr
 
-from src.core.config import settings
-
 
 class GitHubClient:
     def __init__(
@@ -12,7 +10,7 @@ class GitHubClient:
         github_token: SecretStr | None = None,
     ) -> None:
         self.client = client
-        self.github_token = github_token if github_token is not None else settings.github_token
+        self.github_token = github_token
 
     async def get_repository(
         self,
@@ -20,7 +18,7 @@ class GitHubClient:
         owner: str,
         name: str,
     ) -> dict[str, object]:
-        headers = {
+        headers: dict[str, str] = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
