@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     github_token: SecretStr | None = None
 
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: list[str] = ["http://localhost:5173"]
 
     model_config = SettingsConfigDict(
         env_file=".env",
