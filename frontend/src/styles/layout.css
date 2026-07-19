@@ -1,0 +1,110 @@
+.page-container {
+  width: min(calc(100% - 40px), var(--container-width));
+  margin-inline: auto;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-height);
+  border-bottom: 1px solid rgba(38, 49, 66, 0.7);
+  background: rgba(9, 13, 20, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: var(--radius-sm);
+}
+
+.brand__mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(91, 156, 255, 0.42);
+  border-radius: 10px;
+  background: linear-gradient(
+    145deg,
+    rgba(91, 156, 255, 0.2),
+    rgba(91, 156, 255, 0.04)
+  );
+  color: var(--color-accent-hover);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: inset 0 0 18px rgba(91, 156, 255, 0.08);
+}
+
+.brand__name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.header-link:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.site-footer {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.site-footer__inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding-block: 28px;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .page-container {
+    width: min(calc(100% - 28px), var(--container-width));
+  }
+
+  .header-link span {
+    display: none;
+  }
+
+  .site-footer__inner {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-link {
+    transition: none;
+  }
+}
