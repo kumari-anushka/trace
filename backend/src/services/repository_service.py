@@ -13,7 +13,10 @@ from src.stores.repository_store import RepositoryStore
 
 
 class RepositoryService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+    ) -> None:
         self.session = session
         self.repository_store = RepositoryStore(session)
 
@@ -21,11 +24,11 @@ class RepositoryService:
         self,
         *,
         github_url: str,
+        owner: str,
+        name: str,
     ) -> Repository:
-        normalized_url, owner, name = self._parse_github_url(github_url)
-
         existing_repository = await self.repository_store.get_by_github_url(
-            normalized_url,
+            github_url,
         )
 
         if existing_repository is not None:
@@ -33,7 +36,7 @@ class RepositoryService:
 
         try:
             return await self.repository_store.create(
-                github_url=normalized_url,
+                github_url=github_url,
                 owner=owner,
                 name=name,
             )
@@ -50,7 +53,10 @@ class RepositoryService:
     async def list_repositories(self) -> list[Repository]:
         return await self.repository_store.list_all()
 
-    async def delete_repository(self, repository_id: int) -> None:
+    async def delete_repository(
+        self,
+        repository_id: int,
+    ) -> None:
         repository = await self.repository_store.get_by_id(repository_id)
 
         if repository is None:
@@ -59,12 +65,18 @@ class RepositoryService:
         await self.repository_store.delete(repository)
 
     @staticmethod
-    def _parse_github_url(
+    def parse_github_url(
         github_url: str,
     ) -> tuple[str, str, str]:
         parsed_url = urlparse(github_url)
 
-        if parsed_url.hostname not in {"github.com", "www.github.com"}:
+        if parsed_url.scheme != "https":
+            raise InvalidGitHubRepositoryURLError
+
+        if parsed_url.hostname not in {
+            "github.com",
+            "www.github.com",
+        }:
             raise InvalidGitHubRepositoryURLError
 
         path_parts = [part for part in parsed_url.path.strip("/").split("/") if part]
