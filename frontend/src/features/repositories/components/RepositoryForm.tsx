@@ -11,7 +11,12 @@ function getApiErrorMessage(error: unknown): string {
     return "Could not add repository. Try again.";
   }
 
+  const message = error.response?.data?.message;
   const detail = error.response?.data?.detail;
+
+  if (typeof message === "string") {
+    return message;
+  }
 
   if (typeof detail === "string") {
     return detail;
@@ -23,6 +28,10 @@ function getApiErrorMessage(error: unknown): string {
 
   if (error.response?.status === 422) {
     return "GitHub repository URL is invalid.";
+  }
+
+  if (error.response?.status === 502) {
+    return "Could not fetch repository data from GitHub.";
   }
 
   if (!error.response) {
@@ -64,7 +73,8 @@ export function RepositoryForm() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const validationMessage = validateRepositoryUrl(repositoryUrl);
+    const trimmedRepositoryUrl = repositoryUrl.trim();
+    const validationMessage = validateRepositoryUrl(trimmedRepositoryUrl);
 
     if (validationMessage) {
       setValidationError(validationMessage);
@@ -76,14 +86,14 @@ export function RepositoryForm() {
 
     createRepositoryMutation.mutate(
       {
-        github_url: repositoryUrl.trim(),
+        github_url: trimmedRepositoryUrl,
       },
       {
         onSuccess: (repository) => {
           setRepositoryUrl("");
 
           toast.success("Repository added", {
-            description: `${repository.owner}/${repository.name} is ready in your workspace.`,
+            description: `${repository.owner}/${repository.name} was added to your workspace.`,
           });
 
           window.setTimeout(scrollToRepositories, 150);
@@ -129,9 +139,14 @@ export function RepositoryForm() {
             }
           }}
           onBlur={(event) => {
-            const message = validateRepositoryUrl(event.target.value);
+            const value = event.target.value.trim();
 
-            setValidationError(message);
+            if (!value) {
+              setValidationError(null);
+              return;
+            }
+
+            setValidationError(validateRepositoryUrl(value));
           }}
         />
 

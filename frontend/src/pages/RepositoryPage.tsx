@@ -1,7 +1,22 @@
-import { useParams } from "react-router-dom";
+import { Footer } from "../components/layout/Footer";
+import { Header } from "../components/layout/Header";
+import { PageContainer } from "../components/layout/PageContainer";
+import { RepositoryHeader } from "../features/repositories/components/RepositoryHeader";
+import { RepositoryStats } from "../features/repositories/components/RepositoryStats";
 
 export function RepositoryPage() {
-  const { repositoryId } = useParams();
+  return (
+    <div className="app-shell">
+      <Header />
 
-  return <main>Repository: {repositoryId}</main>;
+      <main className="repository-page">
+        <PageContainer>
+          <RepositoryHeader />
+          <RepositoryStats />
+        </PageContainer>
+      </main>
+
+      <Footer />
+    </div>
+  );
 }
