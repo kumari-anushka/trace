@@ -102,10 +102,40 @@ MVP excludes:
 - automatic code edits
 - Neo4j
 
-## Run Locally
+## Local Development
+
+Prerequisites:
+
+- Docker with Compose
+- Python 3.13 and [uv](https://docs.astral.sh/uv/)
+- Node.js 24
+
+Create the local configuration files, then install dependencies:
 
 ```bash
-docker compose up --build
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+make setup
+```
+
+For the fastest development loop, run PostgreSQL and Redis in Docker:
+
+```bash
+make infra
+```
+
+Then run the applications in separate terminals:
+
+```bash
+make backend-dev
+make frontend-dev
+```
+
+To run the complete stack in Docker instead:
+
+```bash
+make dev
 ```
 
 ```text
@@ -114,10 +144,17 @@ Backend:  http://localhost:8000
 API Docs: http://localhost:8000/docs
 ```
 
-Stop:
+Common checks:
 
 ```bash
-docker compose down
+make test
+make lint
+```
+
+Stop the Docker stack:
+
+```bash
+make down
 ```
 
 ## Documentation

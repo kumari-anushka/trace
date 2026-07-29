@@ -1,5 +1,9 @@
 name: GitHub CI
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -78,8 +82,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: docker compose config
+      - run: docker compose --profile app config --quiet
 
-      - run: docker build -t trace-backend ./backend
+      - run: docker build --target production -t trace-backend ./backend
 
-      - run: docker build -t trace-frontend ./frontend
+      - run: docker build --target production -t trace-frontend ./frontend
