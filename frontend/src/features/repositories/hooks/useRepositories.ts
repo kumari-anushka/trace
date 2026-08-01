@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -10,9 +11,24 @@ import {
 } from "../api/repositories.api";
 import type {
   CreateRepositoryInput,
+  IngestionJobStatus,
   Repository,
   RepositoryIngestionStatus,
 } from "../repositories.types";
+
+const ACTIVE_INGESTION_STATUSES: ReadonlySet<IngestionJobStatus> = new Set([
+  "pending",
+  "queued",
+  "running",
+]);
+
+function retryUnlessNotFound(failureCount: number, error: unknown): boolean {
+  if (axios.isAxiosError(error) && error.response?.status === 404) {
+    return false;
+  }
+
+  return failureCount < 3;
+}
 
 export const repositoryQueryKeys = {
   all: ["repositories"] as const,
@@ -35,6 +51,7 @@ export function useRepository(repositoryId: string | undefined) {
     queryKey: repositoryQueryKeys.detail(repositoryId ?? ""),
     queryFn: () => getRepository(repositoryId!),
     enabled: Boolean(repositoryId),
+    retry: retryUnlessNotFound,
   });
 }
 
@@ -51,14 +68,15 @@ export function useRepositoryIngestion(repositoryId: string | undefined) {
     queryKey: repositoryQueryKeys.ingestion(repositoryId ?? ""),
     queryFn: () => getRepositoryIngestionStatus(repositoryId!),
     enabled: Boolean(repositoryId),
+    retry: retryUnlessNotFound,
     refetchInterval: (query) => {
-      const status = query.state.data?.ingestion_job.status;
-
-      if (status === "completed" || status === "failed") {
+      if (query.state.error) {
         return false;
       }
 
-      return 1_500;
+      const status = query.state.data?.ingestion_job.status;
+
+      return status && ACTIVE_INGESTION_STATUSES.has(status) ? 1_500 : false;
     },
   });
 }
