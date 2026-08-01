@@ -1,15 +1,22 @@
 SHELL := /bin/sh
 
-TEST_DATABASE_URL ?= postgresql+psycopg://postgres:postgres@localhost:5432/trace
+POSTGRES_DB ?= trace
+POSTGRES_USER ?= trace
+POSTGRES_PASSWORD ?= trace
+
+-include .env
+
+TEST_DATABASE_URL ?= postgresql+psycopg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:5432/$(POSTGRES_DB)
 TEST_REDIS_URL ?= redis://localhost:6379/0
 
-.PHONY: help setup hooks infra dev backend-dev frontend-dev test test-backend test-frontend lint lint-backend lint-frontend format docker-build down
+.PHONY: help setup hooks infra migrate dev backend-dev frontend-dev test test-backend test-frontend lint lint-backend lint-frontend format docker-build down
 
 help:
 	@echo "Trace development commands"
 	@echo ""
 	@echo "  make setup          Install backend, frontend, and hook tooling"
-	@echo "  make infra          Start PostgreSQL and Redis"
+	@echo "  make infra          Start PostgreSQL and Redis, then apply migrations"
+	@echo "  make migrate        Apply all pending database migrations"
 	@echo "  make backend-dev    Run the backend locally with reload"
 	@echo "  make frontend-dev   Run the frontend locally"
 	@echo "  make dev            Run the complete stack in Docker"
@@ -29,7 +36,11 @@ hooks:
 	uv tool run pre-commit install
 
 infra:
-	docker compose up -d postgres redis
+	docker compose up -d --wait postgres redis
+	$(MAKE) migrate
+
+migrate:
+	cd backend && DATABASE_URL="$(TEST_DATABASE_URL)" REDIS_URL="$(TEST_REDIS_URL)" uv run alembic upgrade head
 
 dev:
 	docker compose --profile app up --build

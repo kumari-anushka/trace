@@ -3,6 +3,7 @@ import type {
   CreateRepositoryInput,
   Repository,
   RepositoryImportResponse,
+  RepositoryIngestionStatus,
   RepositoryListResponse,
   RepositoryVersion,
 } from "../repositories.types";
@@ -56,6 +57,16 @@ export async function getRepositoryVersions(
         repository_id: repositoryId,
       },
     },
+  );
+
+  return response.data;
+}
+
+export async function getRepositoryIngestionStatus(
+  repositoryId: string,
+): Promise<RepositoryIngestionStatus> {
+  const response = await apiClient.get<RepositoryIngestionStatus>(
+    `/repositories/${repositoryId}/ingestion`,
   );
 
   return response.data;

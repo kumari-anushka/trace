@@ -4,12 +4,18 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from src.ingestion.models import IngestionJob, IngestionJobStatus
+from src.ingestion.models import (
+    IngestionJob,
+    IngestionJobStatus,
+    IngestionStage,
+    IngestionStageStatus,
+)
 from src.repositories.models import Repository
 from src.repositories.schemas import (
     MessageResponse,
     RepositoryImportRequest,
     RepositoryImportResponse,
+    RepositoryIngestionStatusResponse,
     RepositoryListResponse,
     RepositoryResponse,
 )
@@ -162,6 +168,38 @@ def test_repository_import_response_contains_created_resources() -> None:
 
     assert response.ingestion_job.status is (IngestionJobStatus.QUEUED)
     assert response.ingestion_job.progress == 0
+
+
+def test_repository_ingestion_status_response_builds_from_models() -> None:
+    repository = make_repository()
+    repository_version = make_repository_version(repository)
+    ingestion_job = make_ingestion_job(repository_version)
+    ingestion_stage = IngestionStage(
+        ingestion_job_id=ingestion_job.id,
+        name="prepare_repository_snapshot",
+        position=0,
+        status=IngestionStageStatus.RUNNING,
+        progress=25,
+    )
+    ingestion_stage.id = uuid4()
+    ingestion_stage.created_at = datetime.now(UTC)
+    ingestion_stage.updated_at = datetime.now(UTC)
+    ingestion_stage.started_at = datetime.now(UTC)
+    ingestion_stage.completed_at = None
+    ingestion_stage.error_message = None
+
+    response = RepositoryIngestionStatusResponse.model_validate(
+        {
+            "repository_id": repository.id,
+            "ingestion_job": ingestion_job,
+            "stages": [ingestion_stage],
+        },
+    )
+
+    assert response.repository_id == repository.id
+    assert response.ingestion_job.id == ingestion_job.id
+    assert response.stages[0].id == ingestion_stage.id
+    assert response.stages[0].progress == 25
 
 
 def test_message_response_contains_message() -> None:

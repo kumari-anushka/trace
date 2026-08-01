@@ -56,3 +56,6 @@ warn_required_dynamic_aliases = true
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+markers = [
+    "integration: uses real PostgreSQL and Redis services",
+]

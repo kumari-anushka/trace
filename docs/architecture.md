@@ -214,7 +214,7 @@ Provider-specific SDKs stay in adapters.
 
 ```text
 Frontend
-→ POST /repositories
+→ POST /api/repositories
 → validate GitHub repo
 → persist repository/job
 → enqueue Redis

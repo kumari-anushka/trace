@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import (
     IngestionDispatchError,
+    PrivateGitHubRepositoryError,
     RepositoryAlreadyExistsError,
 )
 from src.github.client import GitHubClient
@@ -249,6 +250,39 @@ async def test_import_repository_rejects_existing_repository() -> None:
             github_url=GITHUB_URL,
         )
 
+    github_client.get_branch_head.assert_not_awaited()
+    repository_store.create.assert_not_awaited()
+    repository_version_store.create.assert_not_awaited()
+    ingestion_service.create_job.assert_not_awaited()
+    ingestion_queue.enqueue.assert_not_awaited()
+    session.commit.assert_not_awaited()
+    session.rollback.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_import_repository_rejects_private_repository_before_writes() -> None:
+    (
+        service,
+        session,
+        github_client,
+        repository_store,
+        repository_version_store,
+        ingestion_service,
+        ingestion_queue,
+    ) = make_service()
+    github_repository = make_github_repository()
+    github_repository.private = True
+    github_client.get_repository.return_value = github_repository
+
+    with pytest.raises(
+        PrivateGitHubRepositoryError,
+        match="Private repositories are not supported",
+    ):
+        await service.import_repository(
+            github_url=GITHUB_URL,
+        )
+
+    repository_store.get_by_github_id.assert_not_awaited()
     github_client.get_branch_head.assert_not_awaited()
     repository_store.create.assert_not_awaited()
     repository_version_store.create.assert_not_awaited()

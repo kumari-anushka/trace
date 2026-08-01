@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 
-from src.ingestion.schemas import IngestionJobResponse
+from src.ingestion.schemas import IngestionJobResponse, IngestionStageResponse
 from src.repository_versions.schemas import RepositoryVersionResponse
 
 
@@ -34,6 +34,14 @@ class RepositoryImportResponse(BaseModel):
 
 class RepositoryListResponse(BaseModel):
     repositories: list[RepositoryResponse] = Field(
+        default_factory=list,
+    )
+
+
+class RepositoryIngestionStatusResponse(BaseModel):
+    repository_id: UUID
+    ingestion_job: IngestionJobResponse
+    stages: list[IngestionStageResponse] = Field(
         default_factory=list,
     )
 

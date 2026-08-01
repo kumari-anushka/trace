@@ -2,7 +2,10 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
+
 from src.core.exceptions import (
+    ActiveIngestionJobAlreadyExistsError,
     IngestionJobNotFoundError,
     IngestionStageNotFoundError,
     InvalidIngestionJobTransitionError,
@@ -11,12 +14,21 @@ from src.core.exceptions import (
     InvalidIngestionStageTransitionError,
 )
 from src.ingestion.models import (
+    ACTIVE_INGESTION_JOB_INDEX_NAME,
     IngestionJob,
     IngestionJobStatus,
     IngestionStage,
     IngestionStageStatus,
 )
 from src.ingestion.store import IngestionJobStore, IngestionStageStore
+
+
+def _is_active_job_unique_violation(error: IntegrityError) -> bool:
+    diagnostic = getattr(error.orig, "diag", None)
+    constraint_name = getattr(diagnostic, "constraint_name", None)
+
+    return constraint_name == ACTIVE_INGESTION_JOB_INDEX_NAME
+
 
 ALLOWED_STATUS_TRANSITIONS: dict[
     IngestionJobStatus,
@@ -70,9 +82,22 @@ class IngestionService:
         *,
         repository_version_id: UUID,
     ) -> IngestionJob:
-        return await self.store.create(
-            repository_version_id=repository_version_id,
+        active_job = await self.store.get_active_by_repository_version(
+            repository_version_id,
         )
+
+        if active_job is not None:
+            raise ActiveIngestionJobAlreadyExistsError
+
+        try:
+            return await self.store.create(
+                repository_version_id=repository_version_id,
+            )
+        except IntegrityError as error:
+            if _is_active_job_unique_violation(error):
+                raise ActiveIngestionJobAlreadyExistsError from error
+
+            raise
 
     async def get_job(
         self,

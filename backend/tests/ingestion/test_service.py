@@ -3,15 +3,32 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from src.core.exceptions import (
+    ActiveIngestionJobAlreadyExistsError,
     IngestionJobNotFoundError,
     InvalidIngestionJobTransitionError,
     InvalidIngestionProgressError,
 )
-from src.ingestion.models import IngestionJob, IngestionJobStatus
+from src.ingestion.models import (
+    ACTIVE_INGESTION_JOB_INDEX_NAME,
+    IngestionJob,
+    IngestionJobStatus,
+)
 from src.ingestion.service import IngestionService
 from src.ingestion.store import IngestionJobStore
+
+
+class ConstraintDiagnostic:
+    def __init__(self, constraint_name: str) -> None:
+        self.constraint_name = constraint_name
+
+
+class DatabaseConstraintError(Exception):
+    def __init__(self, constraint_name: str) -> None:
+        super().__init__(constraint_name)
+        self.diag = ConstraintDiagnostic(constraint_name)
 
 
 def make_ingestion_job(
@@ -43,6 +60,7 @@ def make_service() -> tuple[
     store = AsyncMock(spec=IngestionJobStore)
 
     store.flush.side_effect = lambda ingestion_job: ingestion_job
+    store.get_active_by_repository_version.return_value = None
 
     service = IngestionService(
         store=store,
@@ -66,9 +84,80 @@ async def test_create_job_returns_created_job() -> None:
     )
 
     assert result is ingestion_job
+    store.get_active_by_repository_version.assert_awaited_once_with(
+        repository_version_id,
+    )
     store.create.assert_awaited_once_with(
         repository_version_id=repository_version_id,
     )
+
+
+@pytest.mark.asyncio
+async def test_create_job_rejects_existing_active_job() -> None:
+    service, store = make_service()
+    repository_version_id = uuid4()
+    active_job = make_ingestion_job(
+        repository_version_id=repository_version_id,
+        status=IngestionJobStatus.QUEUED,
+    )
+    store.get_active_by_repository_version.return_value = active_job
+
+    with pytest.raises(
+        ActiveIngestionJobAlreadyExistsError,
+        match="An ingestion job is already active",
+    ):
+        await service.create_job(
+            repository_version_id=repository_version_id,
+        )
+
+    store.create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_job_maps_unique_index_race_to_domain_error() -> None:
+    service, store = make_service()
+    repository_version_id = uuid4()
+    store.create.side_effect = IntegrityError(
+        statement="INSERT",
+        params={},
+        orig=DatabaseConstraintError(
+            ACTIVE_INGESTION_JOB_INDEX_NAME,
+        ),
+    )
+
+    with pytest.raises(
+        ActiveIngestionJobAlreadyExistsError,
+        match="An ingestion job is already active",
+    ):
+        await service.create_job(
+            repository_version_id=repository_version_id,
+        )
+
+    store.get_active_by_repository_version.assert_awaited_once_with(
+        repository_version_id,
+    )
+    store.create.assert_awaited_once_with(
+        repository_version_id=repository_version_id,
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_job_preserves_unrelated_integrity_error() -> None:
+    service, store = make_service()
+    repository_version_id = uuid4()
+    integrity_error = IntegrityError(
+        statement="INSERT",
+        params={},
+        orig=DatabaseConstraintError("some_other_constraint"),
+    )
+    store.create.side_effect = integrity_error
+
+    with pytest.raises(IntegrityError) as raised_error:
+        await service.create_job(
+            repository_version_id=repository_version_id,
+        )
+
+    assert raised_error.value is integrity_error
 
 
 @pytest.mark.asyncio

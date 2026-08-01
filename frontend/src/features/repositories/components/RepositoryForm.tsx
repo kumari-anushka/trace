@@ -1,6 +1,7 @@
 import axios from "axios";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { useCreateRepository } from "../hooks/useRepositories";
@@ -41,18 +42,12 @@ function getApiErrorMessage(error: unknown): string {
   return "Could not add repository. Try again.";
 }
 
-function scrollToRepositories() {
-  document.getElementById("repositories")?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-}
-
 export function RepositoryForm() {
   const [repositoryUrl, setRepositoryUrl] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const createRepositoryMutation = useCreateRepository();
+  const navigate = useNavigate();
 
   const apiError = createRepositoryMutation.isError
     ? getApiErrorMessage(createRepositoryMutation.error)
@@ -93,10 +88,10 @@ export function RepositoryForm() {
           setRepositoryUrl("");
 
           toast.success("Repository added", {
-            description: `${result.repository.owner}/${result.repository.name} was added. Ingestion is ${result.ingestion_job.status}.`,
+            description: `Building the atlas for ${result.repository.owner}/${result.repository.name}.`,
           });
 
-          window.setTimeout(scrollToRepositories, 150);
+          void navigate(`/repositories/${result.repository.id}/ingestion`);
         },
 
         onError: (mutationError) => {

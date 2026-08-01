@@ -9,6 +9,7 @@ from redis.asyncio import Redis
 from src.api.exception_handlers import register_exception_handlers
 from src.api.router import api_router
 from src.core.config import get_settings
+from src.health.router import router as health_router
 
 
 @asynccontextmanager
@@ -42,6 +43,11 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title=settings.app_name,
+        description=(
+            "Trace turns public GitHub repositories into persistent, "
+            "evidence-backed Software Atlases."
+        ),
+        version="0.1.0",
         lifespan=lifespan,
     )
 
@@ -61,6 +67,7 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    app.include_router(health_router)
     app.include_router(api_router)
 
     return app

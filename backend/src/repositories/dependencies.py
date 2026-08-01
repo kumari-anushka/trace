@@ -9,9 +9,9 @@ from src.github.dependencies import get_github_client
 from src.ingestion.dependencies import get_ingestion_queue
 from src.ingestion.queue import IngestionQueue
 from src.ingestion.service import IngestionService
-from src.ingestion.store import IngestionJobStore
+from src.ingestion.store import IngestionJobStore, IngestionStageStore
 from src.repositories.import_service import RepositoryImportService
-from src.repositories.service import RepositoryService
+from src.repositories.service import RepositoryIngestionService, RepositoryService
 from src.repositories.store import RepositoryStore
 from src.repository_versions.store import RepositoryVersionStore
 
@@ -41,6 +41,16 @@ def get_repository_service(
     return RepositoryService(
         session=session,
         store=repository_store,
+    )
+
+
+def get_repository_ingestion_service(
+    session: SessionDependency,
+) -> RepositoryIngestionService:
+    return RepositoryIngestionService(
+        repository_store=RepositoryStore(session=session),
+        ingestion_job_store=IngestionJobStore(session=session),
+        ingestion_stage_store=IngestionStageStore(session=session),
     )
 
 

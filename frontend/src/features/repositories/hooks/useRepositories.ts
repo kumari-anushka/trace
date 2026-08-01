@@ -4,16 +4,23 @@ import {
   createRepository,
   deleteRepository,
   getRepository,
+  getRepositoryIngestionStatus,
   getRepositories,
   getRepositoryVersions,
 } from "../api/repositories.api";
-import type { CreateRepositoryInput, Repository } from "../repositories.types";
+import type {
+  CreateRepositoryInput,
+  Repository,
+  RepositoryIngestionStatus,
+} from "../repositories.types";
 
 export const repositoryQueryKeys = {
   all: ["repositories"] as const,
   detail: (repositoryId: string) => ["repositories", repositoryId] as const,
   versions: (repositoryId: string) =>
     ["repositories", repositoryId, "versions"] as const,
+  ingestion: (repositoryId: string) =>
+    ["repositories", repositoryId, "ingestion"] as const,
 };
 
 export function useRepositories() {
@@ -39,6 +46,23 @@ export function useRepositoryVersions(repositoryId: string | undefined) {
   });
 }
 
+export function useRepositoryIngestion(repositoryId: string | undefined) {
+  return useQuery({
+    queryKey: repositoryQueryKeys.ingestion(repositoryId ?? ""),
+    queryFn: () => getRepositoryIngestionStatus(repositoryId!),
+    enabled: Boolean(repositoryId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.ingestion_job.status;
+
+      if (status === "completed" || status === "failed") {
+        return false;
+      }
+
+      return 1_500;
+    },
+  });
+}
+
 export function useCreateRepository() {
   const queryClient = useQueryClient();
 
@@ -61,6 +85,14 @@ export function useCreateRepository() {
       queryClient.setQueryData(
         repositoryQueryKeys.versions(result.repository.id),
         [result.repository_version],
+      );
+      queryClient.setQueryData<RepositoryIngestionStatus>(
+        repositoryQueryKeys.ingestion(result.repository.id),
+        {
+          repository_id: result.repository.id,
+          ingestion_job: result.ingestion_job,
+          stages: [],
+        },
       );
 
       await queryClient.invalidateQueries({

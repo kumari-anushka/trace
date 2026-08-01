@@ -1,317 +1,265 @@
-# Trace — API
+# Trace API
 
-Base URL:
+This document describes the API that is implemented today. Planned Atlas
+endpoints are listed separately and are not part of the current contract.
+
+## Local URLs
 
 ```text
-/api
+API base:    http://localhost:8000/api
+Health:      http://localhost:8000/health
+Swagger UI:  http://localhost:8000/docs
+ReDoc:       http://localhost:8000/redoc
+OpenAPI:     http://localhost:8000/openapi.json
 ```
+
+`/health` is intentionally outside `/api` because it is used by Docker and
+infrastructure monitoring. All product endpoints are under `/api`.
 
 ## Conventions
 
-- JSON only
-- UUID internal IDs
-- ISO 8601 UTC timestamps
-- typed request/response models
-- stable error codes
-- pagination for lists
+- Requests and responses use JSON.
+- Internal identifiers are UUID strings.
+- Timestamps are ISO 8601 values with timezone information.
+- Repository snapshots are identified by immutable Git commit SHAs.
+- PostgreSQL is the source of truth for ingestion progress.
 
-## Error Shape
+## Error responses
+
+Application errors use:
 
 ```json
 {
-  "error": {
-    "code": "repository_not_found",
-    "message": "Repository does not exist.",
-    "retryable": false,
-    "details": {},
-    "request_id": "req_123"
-  }
+  "message": "Repository not found"
 }
 ```
 
-## Pagination
+Request-validation errors also include Pydantic's structured error list:
 
-```text
-page=1
-page_size=20
+```json
+{
+  "message": "Invalid request",
+  "errors": []
+}
 ```
 
-Max:
+Currently used status codes:
 
-```text
-100
+| Status | Meaning |
+|---|---|
+| `200` | Successful read or delete |
+| `201` | Repository, snapshot, and ingestion job created |
+| `404` | Repository, snapshot, job, or GitHub resource not found |
+| `409` | Existing repository, duplicate active job, or invalid state transition |
+| `422` | Invalid URL, private repository, or request validation failure |
+| `502` | GitHub provider failure |
+| `503` | Ingestion job could not be dispatched |
+
+## Health
+
+### Check API health
+
+```http
+GET /health
 ```
 
 Response:
 
 ```json
 {
-  "items": [],
-  "page": 1,
-  "page_size": 20,
-  "total": 0,
-  "has_next": false
+  "status": "ok"
 }
-```
-
-## Health
-
-```http
-GET /health/live
-GET /health/ready
 ```
 
 ## Repositories
 
-### Create or Reuse
+### Import a public repository
 
 ```http
-POST /repositories
-```
-
-```json
-{
-  "url": "https://github.com/owner/repository"
-}
-```
-
-Responses:
-
-- `202` new ingestion
-- `200` existing Atlas
-- `422` invalid/unsupported
-- `404` not found
-- `403` private
-- `429` rate limited
-
-### List
-
-```http
-GET /repositories
-```
-
-### Detail
-
-```http
-GET /repositories/{repository_id}
-```
-
-### Reindex
-
-```http
-POST /repositories/{repository_id}/reindex
-```
-
-P2.
-
-## Ingestion
-
-```http
-GET /repositories/{repository_id}/ingestion
-GET /ingestion-jobs/{job_id}
-POST /ingestion-jobs/{job_id}/retry
-```
-
-Job response includes:
-
-- status
-- stage
-- progress
-- timestamps
-- error
-- stage list
-
-## Atlas
-
-```http
-GET /repositories/{id}/overview
-GET /repositories/{id}/architecture
-GET /repositories/{id}/subsystems
-GET /repositories/{id}/subsystems/{subsystem_id}
-GET /repositories/{id}/timeline
-GET /repositories/{id}/decisions
-GET /repositories/{id}/decisions/{decision_id}
-GET /repositories/{id}/contributors
-GET /repositories/{id}/contributors/{contributor_id}
-GET /repositories/{id}/atlas/status
-```
-
-Every inferred object exposes:
-
-- confidence
-- evidence IDs
-- knowledge kind
-- limitations where relevant
-
-## Graph
-
-```http
-GET /repositories/{id}/graph
-GET /repositories/{id}/graph/nodes/{node_id}/neighbors
-GET /repositories/{id}/graph/path
-```
-
-Limits:
-
-```text
-depth <= 3
-nodes <= 500
-```
-
-## Search
-
-```http
-GET /repositories/{id}/search
-```
-
-Parameters:
-
-```text
-q
-types
-mode
-page
-page_size
-```
-
-Modes:
-
-```text
-exact
-prefix
-semantic
-hybrid
-```
-
-## Ask
-
-```http
-POST /repositories/{id}/query
+POST /api/repositories
+Content-Type: application/json
 ```
 
 Request:
 
 ```json
 {
-  "question": "Why was Redis introduced?",
-  "filters": {
-    "subsystem_ids": [],
-    "date_from": null,
-    "date_to": null
+  "github_url": "https://github.com/owner/repository"
+}
+```
+
+Successful response: `201 Created`
+
+```json
+{
+  "repository": {
+    "id": "9f5f4d06-8246-49bc-9937-8282ac03f69e",
+    "github_id": 123456,
+    "github_url": "https://github.com/owner/repository",
+    "owner": "owner",
+    "name": "repository",
+    "default_branch": "main",
+    "created_at": "2026-08-01T12:00:00Z",
+    "updated_at": "2026-08-01T12:00:00Z"
+  },
+  "repository_version": {
+    "id": "42637082-b422-4f58-9582-3b47c5e04f3b",
+    "repository_id": "9f5f4d06-8246-49bc-9937-8282ac03f69e",
+    "commit_sha": "0123456789abcdef0123456789abcdef01234567",
+    "branch": "main",
+    "created_at": "2026-08-01T12:00:00Z"
+  },
+  "ingestion_job": {
+    "id": "4c734c20-6aa0-48f0-89fd-aad49609953b",
+    "repository_version_id": "42637082-b422-4f58-9582-3b47c5e04f3b",
+    "status": "queued",
+    "progress": 0,
+    "error_message": null,
+    "created_at": "2026-08-01T12:00:00Z",
+    "updated_at": "2026-08-01T12:00:00Z",
+    "started_at": null,
+    "completed_at": null
   }
 }
+```
+
+Important errors:
+
+- `404`: GitHub repository not found.
+- `409`: Repository already exists.
+- `422`: Invalid GitHub URL or private repository.
+- `502`: GitHub API failure.
+- `503`: Job could not be placed on the ingestion queue.
+
+GitHub normally returns `404` when a private repository is not visible to the
+configured token. Trace can return the specific private-repository error only
+when GitHub exposes metadata containing `private: true`.
+
+### List repositories
+
+```http
+GET /api/repositories
 ```
 
 Response:
 
 ```json
 {
-  "answer": "Redis appears to have been introduced...",
-  "confidence": 0.73,
-  "intent": "decision",
-  "retrieval_strategy": "adaptive_hybrid",
-  "evidence": [],
-  "citations": [],
-  "graph_path": [],
-  "related_files": [],
-  "related_decisions": [],
-  "timeline_events": [],
-  "limitations": [],
-  "possible_interpretations": [],
-  "suggested_follow_up": []
+  "repositories": []
 }
 ```
 
-Rules:
-
-- question length 1–2000
-- cited when evidence exists
-- unsupported certainty prohibited
-- weak evidence returns limitations + nearby evidence
-
-## Evidence
+### Get a repository
 
 ```http
-GET /evidence/{evidence_id}
+GET /api/repositories/{repository_id}
 ```
 
-Returns:
+### Delete a repository
 
-- source entity
-- target entity/edge
-- evidence type
-- excerpt
-- URL
-- line range
-- confidence
-- provenance
+```http
+DELETE /api/repositories/{repository_id}
+```
 
-## Status Codes
+Deleting a repository cascades to its versions, ingestion jobs, and ingestion
+stages.
 
-| Status | Meaning |
-|---|---|
-| 200 | Successful read |
-| 201 | Created |
-| 202 | Async work accepted |
-| 400 | Bad request |
-| 404 | Not found |
-| 409 | Invalid state |
-| 422 | Validation failed |
-| 429 | Rate limited |
-| 502 | Provider failure |
-| 503 | Temporary unavailability |
+Response:
 
-## Common Error Codes
+```json
+{
+  "message": "Repository deleted successfully"
+}
+```
+
+### Get repository ingestion progress
+
+```http
+GET /api/repositories/{repository_id}/ingestion
+```
+
+The newest ingestion job across the repository's snapshots is returned with
+its ordered stages:
+
+```json
+{
+  "repository_id": "9f5f4d06-8246-49bc-9937-8282ac03f69e",
+  "ingestion_job": {
+    "id": "4c734c20-6aa0-48f0-89fd-aad49609953b",
+    "repository_version_id": "42637082-b422-4f58-9582-3b47c5e04f3b",
+    "status": "running",
+    "progress": 45,
+    "error_message": null,
+    "created_at": "2026-08-01T12:00:00Z",
+    "updated_at": "2026-08-01T12:00:05Z",
+    "started_at": "2026-08-01T12:00:01Z",
+    "completed_at": null
+  },
+  "stages": [
+    {
+      "id": "ca00e29b-b70a-4a30-aaf5-234f41b6cdde",
+      "ingestion_job_id": "4c734c20-6aa0-48f0-89fd-aad49609953b",
+      "name": "prepare_repository_snapshot",
+      "position": 0,
+      "status": "running",
+      "progress": 45,
+      "error_message": null,
+      "created_at": "2026-08-01T12:00:01Z",
+      "updated_at": "2026-08-01T12:00:05Z",
+      "started_at": "2026-08-01T12:00:01Z",
+      "completed_at": null
+    }
+  ]
+}
+```
+
+Job statuses:
 
 ```text
-validation_error
-repository_not_found
-repository_private
-repository_unsupported
-repository_too_large
-ingestion_conflict
-atlas_not_ready
-entity_not_found
-evidence_not_found
-rate_limited
-provider_unavailable
-github_unavailable
-embedding_unavailable
-llm_unavailable
-internal_error
+pending → queued → running → completed
+                           ↘ failed
 ```
 
-## P0 Endpoints
+Stage statuses are `pending`, `running`, `completed`, `failed`, or `skipped`.
 
-```text
-POST /repositories
-GET /repositories/{id}
-GET /repositories/{id}/ingestion
-GET /repositories/{id}/overview
-GET /evidence/{id}
-GET /health/live
-GET /health/ready
+## Repository versions
+
+### List repository versions
+
+```http
+GET /api/repository-versions?repository_id={repository_id}
 ```
 
-## P1 Endpoints
+Versions are returned newest first.
 
-```text
-architecture
-subsystems
-timeline
-decisions
-contributors
-graph
-search
-query
+### Get a repository version
+
+```http
+GET /api/repository-versions/{repository_version_id}
 ```
 
-## OpenAPI
+## Ingestion jobs
 
-FastAPI docs:
+### Get an ingestion job
 
-```text
-/docs
-/redoc
-/openapi.json
+```http
+GET /api/ingestion-jobs/{ingestion_job_id}
 ```
+
+This lower-level endpoint returns the job itself. Use the repository ingestion
+endpoint when the frontend also needs the ordered stage list.
+
+## Idempotency
+
+Trace permits at most one active ingestion job per immutable repository
+version. Active means `pending`, `queued`, or `running`. Completed and failed
+jobs remain as history and do not prevent a later retry.
+
+The rule is enforced by both a service pre-check and a PostgreSQL partial
+unique index, protecting against simultaneous requests.
+
+## Planned endpoints
+
+Atlas overview, architecture, subsystems, timeline, decisions, contributors,
+graph, search, evidence, retry, and cited-question endpoints are planned for
+later roadmap weeks. They are intentionally not documented as available yet.

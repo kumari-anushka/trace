@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException
 
 from src.api.exception_handlers import register_exception_handlers
 from src.core.exceptions import (
+    ActiveIngestionJobAlreadyExistsError,
     GitHubAPIError,
     GitHubRepositoryNotFoundError,
     IngestionDispatchError,
@@ -17,6 +18,7 @@ from src.core.exceptions import (
     InvalidIngestionProgressError,
     InvalidIngestionStageProgressError,
     InvalidIngestionStageTransitionError,
+    PrivateGitHubRepositoryError,
     RepositoryAlreadyExistsError,
     RepositoryNotFoundError,
     RepositoryVersionNotFoundError,
@@ -45,6 +47,11 @@ def create_test_client(
     ("exception_factory", "expected_status", "expected_message"),
     [
         (
+            ActiveIngestionJobAlreadyExistsError,
+            409,
+            "An ingestion job is already active for this repository version",
+        ),
+        (
             InvalidGitHubRepositoryURLError,
             422,
             "Invalid GitHub repository URL",
@@ -53,6 +60,11 @@ def create_test_client(
             GitHubRepositoryNotFoundError,
             404,
             "GitHub repository not found",
+        ),
+        (
+            PrivateGitHubRepositoryError,
+            422,
+            "Private repositories are not supported. Use a public GitHub repository.",
         ),
         (
             GitHubAPIError,

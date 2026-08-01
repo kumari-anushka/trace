@@ -5,9 +5,16 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import RepositoryNotFoundError
+from src.core.exceptions import IngestionJobNotFoundError, RepositoryNotFoundError
+from src.ingestion.models import (
+    IngestionJob,
+    IngestionJobStatus,
+    IngestionStage,
+    IngestionStageStatus,
+)
+from src.ingestion.store import IngestionJobStore, IngestionStageStore
 from src.repositories.models import Repository
-from src.repositories.service import RepositoryService
+from src.repositories.service import RepositoryIngestionService, RepositoryService
 from src.repositories.store import RepositoryStore
 
 
@@ -178,3 +185,112 @@ async def test_delete_repository_rolls_back_when_commit_fails() -> None:
     store.delete.assert_awaited_once_with(repository)
     session.commit.assert_awaited_once_with()
     session.rollback.assert_awaited_once_with()
+
+
+def make_ingestion_status_service() -> tuple[
+    RepositoryIngestionService,
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+]:
+    repository_store = AsyncMock(spec=RepositoryStore)
+    ingestion_job_store = AsyncMock(spec=IngestionJobStore)
+    ingestion_stage_store = AsyncMock(spec=IngestionStageStore)
+
+    service = RepositoryIngestionService(
+        repository_store=repository_store,
+        ingestion_job_store=ingestion_job_store,
+        ingestion_stage_store=ingestion_stage_store,
+    )
+
+    return (
+        service,
+        repository_store,
+        ingestion_job_store,
+        ingestion_stage_store,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_ingestion_status_returns_latest_job_and_stages() -> None:
+    (
+        service,
+        repository_store,
+        ingestion_job_store,
+        ingestion_stage_store,
+    ) = make_ingestion_status_service()
+    repository = make_repository()
+    ingestion_job = IngestionJob(
+        repository_version_id=uuid4(),
+        status=IngestionJobStatus.RUNNING,
+        progress=40,
+    )
+    ingestion_job.id = uuid4()
+    ingestion_stage = IngestionStage(
+        ingestion_job_id=ingestion_job.id,
+        name="prepare_repository_snapshot",
+        position=0,
+        status=IngestionStageStatus.RUNNING,
+        progress=40,
+    )
+
+    repository_store.get_by_id.return_value = repository
+    ingestion_job_store.get_latest_by_repository.return_value = ingestion_job
+    ingestion_stage_store.list_by_ingestion_job.return_value = [
+        ingestion_stage,
+    ]
+
+    result = await service.get_status(repository.id)
+
+    assert result.repository_id == repository.id
+    assert result.ingestion_job is ingestion_job
+    assert result.stages == [ingestion_stage]
+    repository_store.get_by_id.assert_awaited_once_with(repository.id)
+    ingestion_job_store.get_latest_by_repository.assert_awaited_once_with(
+        repository.id,
+    )
+    ingestion_stage_store.list_by_ingestion_job.assert_awaited_once_with(
+        ingestion_job.id,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_ingestion_status_raises_when_repository_is_missing() -> None:
+    (
+        service,
+        repository_store,
+        ingestion_job_store,
+        ingestion_stage_store,
+    ) = make_ingestion_status_service()
+    repository_id = uuid4()
+    repository_store.get_by_id.return_value = None
+
+    with pytest.raises(
+        RepositoryNotFoundError,
+        match="Repository not found",
+    ):
+        await service.get_status(repository_id)
+
+    ingestion_job_store.get_latest_by_repository.assert_not_awaited()
+    ingestion_stage_store.list_by_ingestion_job.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_get_ingestion_status_raises_when_job_is_missing() -> None:
+    (
+        service,
+        repository_store,
+        ingestion_job_store,
+        ingestion_stage_store,
+    ) = make_ingestion_status_service()
+    repository = make_repository()
+    repository_store.get_by_id.return_value = repository
+    ingestion_job_store.get_latest_by_repository.return_value = None
+
+    with pytest.raises(
+        IngestionJobNotFoundError,
+        match="Ingestion job not found",
+    ):
+        await service.get_status(repository.id)
+
+    ingestion_stage_store.list_by_ingestion_job.assert_not_awaited()

@@ -3,9 +3,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from src.ingestion.schemas import IngestionJobResponse
+from src.ingestion.schemas import IngestionJobResponse, IngestionStageResponse
 from src.repositories.dependencies import (
     get_repository_import_service,
+    get_repository_ingestion_service,
     get_repository_service,
 )
 from src.repositories.import_service import RepositoryImportService
@@ -13,10 +14,11 @@ from src.repositories.schemas import (
     MessageResponse,
     RepositoryImportRequest,
     RepositoryImportResponse,
+    RepositoryIngestionStatusResponse,
     RepositoryListResponse,
     RepositoryResponse,
 )
-from src.repositories.service import RepositoryService
+from src.repositories.service import RepositoryIngestionService, RepositoryService
 from src.repository_versions.schemas import RepositoryVersionResponse
 
 router = APIRouter(
@@ -33,6 +35,11 @@ RepositoryServiceDependency = Annotated[
 RepositoryImportServiceDependency = Annotated[
     RepositoryImportService,
     Depends(get_repository_import_service),
+]
+
+RepositoryIngestionServiceDependency = Annotated[
+    RepositoryIngestionService,
+    Depends(get_repository_ingestion_service),
 ]
 
 
@@ -73,6 +80,25 @@ async def list_repositories(
 
     return RepositoryListResponse(
         repositories=[RepositoryResponse.model_validate(repository) for repository in repositories],
+    )
+
+
+@router.get(
+    "/{repository_id}/ingestion",
+    response_model=RepositoryIngestionStatusResponse,
+)
+async def get_repository_ingestion_status(
+    repository_id: UUID,
+    service: RepositoryIngestionServiceDependency,
+) -> RepositoryIngestionStatusResponse:
+    result = await service.get_status(repository_id)
+
+    return RepositoryIngestionStatusResponse(
+        repository_id=result.repository_id,
+        ingestion_job=IngestionJobResponse.model_validate(
+            result.ingestion_job,
+        ),
+        stages=[IngestionStageResponse.model_validate(stage) for stage in result.stages],
     )
 
 

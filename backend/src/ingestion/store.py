@@ -5,11 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ingestion.models import (
+    ACTIVE_INGESTION_JOB_STATUSES,
     IngestionJob,
     IngestionJobStatus,
     IngestionStage,
     IngestionStageStatus,
 )
+from src.repository_versions.models import RepositoryVersion
 
 
 class IngestionJobStore:
@@ -41,6 +43,26 @@ class IngestionJobStore:
             ingestion_job_id,
         )
 
+    async def get_active_by_repository_version(
+        self,
+        repository_version_id: UUID,
+    ) -> IngestionJob | None:
+        statement = (
+            select(IngestionJob)
+            .where(
+                IngestionJob.repository_version_id == repository_version_id,
+                IngestionJob.status.in_(ACTIVE_INGESTION_JOB_STATUSES),
+            )
+            .order_by(
+                IngestionJob.created_at.desc(),
+            )
+            .limit(1)
+        )
+
+        result = await self.session.execute(statement)
+
+        return result.scalar_one_or_none()
+
     async def list_by_repository_version(
         self,
         repository_version_id: UUID,
@@ -58,6 +80,30 @@ class IngestionJobStore:
         result = await self.session.execute(statement)
 
         return result.scalars().all()
+
+    async def get_latest_by_repository(
+        self,
+        repository_id: UUID,
+    ) -> IngestionJob | None:
+        statement = (
+            select(IngestionJob)
+            .join(
+                RepositoryVersion,
+                IngestionJob.repository_version_id == RepositoryVersion.id,
+            )
+            .where(
+                RepositoryVersion.repository_id == repository_id,
+            )
+            .order_by(
+                IngestionJob.created_at.desc(),
+                IngestionJob.id.desc(),
+            )
+            .limit(1)
+        )
+
+        result = await self.session.execute(statement)
+
+        return result.scalar_one_or_none()
 
     async def flush(
         self,

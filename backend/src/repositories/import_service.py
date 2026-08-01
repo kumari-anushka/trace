@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import (
     IngestionDispatchError,
+    PrivateGitHubRepositoryError,
     RepositoryAlreadyExistsError,
 )
 from src.github.client import GitHubClient
@@ -58,6 +59,9 @@ class RepositoryImportService:
             owner=reference.owner,
             name=reference.name,
         )
+
+        if github_repository.private:
+            raise PrivateGitHubRepositoryError
 
         existing_repository = await self.repository_store.get_by_github_id(
             github_repository.github_id,
