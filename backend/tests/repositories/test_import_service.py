@@ -372,14 +372,20 @@ async def test_import_repository_raises_when_dispatch_fails() -> None:
             github_url=GITHUB_URL,
         )
 
-    session.commit.assert_awaited_once_with()
-    session.rollback.assert_awaited_once_with()
+    assert session.commit.await_count == 3
+    session.rollback.assert_not_awaited()
 
     ingestion_queue.enqueue.assert_awaited_once_with(
         ingestion_job_id=ingestion_job.id,
     )
 
-    ingestion_service.mark_queued.assert_not_awaited()
+    ingestion_service.mark_queued.assert_awaited_once_with(
+        ingestion_job,
+    )
+    ingestion_service.mark_failed.assert_awaited_once_with(
+        ingestion_job,
+        error_message="Failed to enqueue ingestion job",
+    )
 
 
 @pytest.mark.asyncio
@@ -423,9 +429,7 @@ async def test_import_repository_rolls_back_when_mark_queued_fails() -> None:
     assert session.commit.await_count == 1
     session.rollback.assert_awaited_once_with()
 
-    ingestion_queue.enqueue.assert_awaited_once_with(
-        ingestion_job_id=ingestion_job.id,
-    )
+    ingestion_queue.enqueue.assert_not_awaited()
 
     ingestion_service.mark_queued.assert_awaited_once_with(
         ingestion_job,

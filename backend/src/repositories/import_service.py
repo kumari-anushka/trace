@@ -100,14 +100,27 @@ class RepositoryImportService:
             raise
 
         try:
-            await self.ingestion_queue.enqueue(
-                ingestion_job_id=ingestion_job.id,
-            )
             await self.ingestion_service.mark_queued(ingestion_job)
             await self.session.refresh(ingestion_job)
             await self.session.commit()
         except Exception as error:
             await self.session.rollback()
+            raise IngestionDispatchError from error
+
+        try:
+            await self.ingestion_queue.enqueue(
+                ingestion_job_id=ingestion_job.id,
+            )
+        except Exception as error:
+            try:
+                await self.ingestion_service.mark_failed(
+                    ingestion_job,
+                    error_message="Failed to enqueue ingestion job",
+                )
+                await self.session.commit()
+            except Exception:
+                await self.session.rollback()
+
             raise IngestionDispatchError from error
 
         return RepositoryImportResult(
