@@ -285,6 +285,8 @@ class IngestionStageService:
     async def mark_completed(
         self,
         ingestion_stage: IngestionStage,
+        *,
+        output_summary: dict[str, object] | None = None,
     ) -> IngestionStage:
         self._transition_to(
             ingestion_stage,
@@ -292,6 +294,7 @@ class IngestionStageService:
         )
         ingestion_stage.progress = 100
         ingestion_stage.error_message = None
+        ingestion_stage.output_summary = output_summary
         ingestion_stage.completed_at = datetime.now(UTC)
 
         return await self.store.flush(ingestion_stage)

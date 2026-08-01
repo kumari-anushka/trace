@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import IngestionJobNotFoundError
+from src.core.exceptions import IngestionJobNotFoundError, RetryableGitHubAPIError
 from src.ingestion.models import IngestionJob, IngestionJobStatus
 from src.ingestion.queue import (
     IngestionConsumer,
@@ -151,6 +151,22 @@ async def test_run_once_records_processor_failure_before_acknowledging() -> None
     assert session.rollback.await_count == 1
     assert session.commit.await_count == 2
     consumer.acknowledge.assert_awaited_once_with("123-0")
+
+
+@pytest.mark.asyncio
+async def test_run_once_leaves_retryable_provider_failure_pending() -> None:
+    worker, session, consumer, ingestion_service, processor = make_worker()
+    ingestion_job = make_ingestion_job()
+    consumer.read.return_value = make_message(ingestion_job.id)
+    ingestion_service.get_job.return_value = ingestion_job
+    processor.process.side_effect = RetryableGitHubAPIError("GitHub unavailable")
+
+    processed = await worker.run_once()
+
+    assert processed is True
+    ingestion_service.mark_failed.assert_not_awaited()
+    consumer.acknowledge.assert_not_awaited()
+    session.rollback.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio

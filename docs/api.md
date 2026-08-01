@@ -99,6 +99,18 @@ Successful response: `201 Created`
     "owner": "owner",
     "name": "repository",
     "default_branch": "main",
+    "description": null,
+    "homepage": null,
+    "primary_language": null,
+    "stars_count": 0,
+    "forks_count": 0,
+    "watchers_count": 0,
+    "open_issues_count": 0,
+    "archived": false,
+    "disabled": false,
+    "provider_created_at": null,
+    "provider_updated_at": null,
+    "provider_pushed_at": null,
     "created_at": "2026-08-01T12:00:00Z",
     "updated_at": "2026-08-01T12:00:00Z"
   },
@@ -107,6 +119,9 @@ Successful response: `201 Created`
     "repository_id": "9f5f4d06-8246-49bc-9937-8282ac03f69e",
     "commit_sha": "0123456789abcdef0123456789abcdef01234567",
     "branch": "main",
+    "languages": null,
+    "source_tree_sha": null,
+    "source_tree_truncated": false,
     "created_at": "2026-08-01T12:00:00Z"
   },
   "ingestion_job": {
@@ -199,11 +214,19 @@ its ordered stages:
     {
       "id": "ca00e29b-b70a-4a30-aaf5-234f41b6cdde",
       "ingestion_job_id": "4c734c20-6aa0-48f0-89fd-aad49609953b",
-      "name": "prepare_repository_snapshot",
+      "name": "fetch_source_tree",
       "position": 0,
       "status": "running",
       "progress": 45,
       "error_message": null,
+      "output_summary": {
+        "snapshot_sha": "0123456789abcdef0123456789abcdef01234567",
+        "source_tree_sha": "89abcdef0123456789abcdef0123456789abcdef",
+        "files": 412,
+        "source": 218,
+        "test": 96,
+        "documentation": 31
+      },
       "created_at": "2026-08-01T12:00:01Z",
       "updated_at": "2026-08-01T12:00:05Z",
       "started_at": "2026-08-01T12:00:01Z",
@@ -221,6 +244,9 @@ pending → queued → running → completed
 ```
 
 Stage statuses are `pending`, `running`, `completed`, `failed`, or `skipped`.
+Completed Week 2 stages include count-based `output_summary` values. The
+pipeline stages are `fetch_repository_metadata`, `fetch_source_tree`, and
+`fetch_github_artifacts`.
 
 ## Repository versions
 

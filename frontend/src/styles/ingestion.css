@@ -509,6 +509,35 @@
   line-height: 1.55;
 }
 
+.ingestion-stage__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.ingestion-stage__summary > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid rgba(89, 104, 128, 0.25);
+  border-radius: 8px;
+  background: rgba(17, 24, 35, 0.55);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.ingestion-stage__summary dt {
+  color: var(--color-text-muted);
+}
+
+.ingestion-stage__summary dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
 .ingestion-stage-waiting {
   display: flex;
   align-items: center;

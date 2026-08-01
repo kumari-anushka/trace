@@ -25,6 +25,23 @@ class GitHubAPIError(TraceError):
     default_message = "GitHub API request failed"
 
 
+class RetryableGitHubAPIError(GitHubAPIError):
+    default_message = "GitHub API request failed temporarily"
+
+
+class GitHubRateLimitError(RetryableGitHubAPIError):
+    default_message = "GitHub API rate limit exceeded"
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        retry_after_seconds: float | None = None,
+    ) -> None:
+        self.retry_after_seconds = retry_after_seconds
+        super().__init__(message)
+
+
 class RepositoryAlreadyExistsError(TraceError):
     default_message = "Repository already exists"
 

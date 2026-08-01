@@ -50,6 +50,10 @@ Exit gate:
 
 ## Week 2 — GitHub Ingestion
 
+Implementation status: complete. See
+[`week-2-ingestion.md`](week-2-ingestion.md) for snapshot, identity, retry, and
+history-bound behavior.
+
 Build:
 
 - repository metadata

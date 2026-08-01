@@ -58,8 +58,8 @@ def test_github_repository_ignores_extra_fields() -> None:
     repository = GitHubRepository.model_validate(payload)
 
     assert repository.github_id == 123456789
-    assert not hasattr(repository, "description")
-    assert not hasattr(repository, "forks_count")
+    assert repository.description == "Software intelligence platform"
+    assert repository.forks_count == 42
 
 
 @pytest.mark.parametrize(
@@ -117,7 +117,7 @@ def test_github_commit_ignores_extra_fields() -> None:
     )
 
     assert commit.sha == "b" * 40
-    assert not hasattr(commit, "commit")
+    assert commit.commit.message == "Initial commit"
 
 
 def test_github_commit_rejects_missing_sha() -> None:
