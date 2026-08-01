@@ -1,8 +1,18 @@
-import { ArrowLeft } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, ExternalLink, GitBranch } from "lucide-react";
+import { Link } from "react-router-dom";
 
-export function RepositoryHeader() {
-  const { repositoryId } = useParams();
+import type { Repository, RepositoryVersion } from "../repositories.types";
+
+type RepositoryHeaderProps = {
+  repository: Repository;
+  latestVersion?: RepositoryVersion;
+};
+
+export function RepositoryHeader({
+  repository,
+  latestVersion,
+}: RepositoryHeaderProps) {
+  const branch = latestVersion?.branch ?? repository.default_branch;
 
   return (
     <>
@@ -12,11 +22,21 @@ export function RepositoryHeader() {
       </Link>
 
       <div className="repository-hero">
-        <p className="repository-id">Repository #{repositoryId}</p>
+        <p className="repository-id">{repository.owner}</p>
 
-        <h1>Software Atlas</h1>
+        <h1>{repository.name}</h1>
 
-        <p>Atlas generation begins here in Week 2.</p>
+        <div className="repository-hero__meta">
+          <span>
+            <GitBranch size={15} aria-hidden="true" />
+            {branch}
+          </span>
+
+          <a href={repository.github_url} target="_blank" rel="noreferrer">
+            View on GitHub
+            <ExternalLink size={15} aria-hidden="true" />
+          </a>
+        </div>
       </div>
     </>
   );

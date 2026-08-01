@@ -90,6 +90,72 @@ async def test_get_repository_returns_repository() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_repository_follows_redirect_for_moved_repository() -> None:
+    requested_urls: list[httpx.URL] = []
+
+    def handler(
+        request: httpx.Request,
+    ) -> httpx.Response:
+        requested_urls.append(request.url)
+
+        if request.url.path == "/repos/old-owner/trace":
+            return httpx.Response(
+                status_code=301,
+                headers={
+                    "Location": "https://api.github.com/repositories/123456789",
+                },
+                request=request,
+            )
+
+        return httpx.Response(
+            status_code=200,
+            json=repository_payload(),
+            request=request,
+        )
+
+    github_client, http_client = create_github_client(handler)
+
+    try:
+        repository = await github_client.get_repository(
+            owner="old-owner",
+            name="trace",
+        )
+    finally:
+        await http_client.aclose()
+
+    assert requested_urls == [
+        httpx.URL("https://api.github.com/repos/old-owner/trace"),
+        httpx.URL("https://api.github.com/repositories/123456789"),
+    ]
+    assert repository.full_name == "kumari-anushka/trace"
+
+
+@pytest.mark.asyncio
+async def test_get_repository_explains_redirect_without_destination() -> None:
+    def handler(
+        request: httpx.Request,
+    ) -> httpx.Response:
+        return httpx.Response(
+            status_code=301,
+            request=request,
+        )
+
+    github_client, http_client = create_github_client(handler)
+
+    try:
+        with pytest.raises(
+            GitHubAPIError,
+            match="GitHub reports that this repository has moved",
+        ):
+            await github_client.get_repository(
+                owner="old-owner",
+                name="trace",
+            )
+    finally:
+        await http_client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_get_repository_omits_authorization_without_token() -> None:
     def handler(
         request: httpx.Request,

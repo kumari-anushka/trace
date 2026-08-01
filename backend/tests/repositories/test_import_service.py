@@ -209,6 +209,9 @@ async def test_import_repository_creates_and_dispatches_import() -> None:
     )
 
     assert session.commit.await_count == 2
+    session.refresh.assert_awaited_once_with(
+        ingestion_job,
+    )
     session.rollback.assert_not_awaited()
 
     ingestion_queue.enqueue.assert_awaited_once_with(

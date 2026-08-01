@@ -67,8 +67,8 @@ class RepositoryImportService:
             raise RepositoryAlreadyExistsError
 
         github_commit = await self.github_client.get_branch_head(
-            owner=reference.owner,
-            name=reference.name,
+            owner=github_repository.owner.login,
+            name=github_repository.name,
             branch=github_repository.default_branch,
         )
 
@@ -104,6 +104,7 @@ class RepositoryImportService:
                 ingestion_job_id=ingestion_job.id,
             )
             await self.ingestion_service.mark_queued(ingestion_job)
+            await self.session.refresh(ingestion_job)
             await self.session.commit()
         except Exception as error:
             await self.session.rollback()

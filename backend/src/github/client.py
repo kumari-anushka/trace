@@ -69,7 +69,12 @@ class GitHubClient:
             response = await self.http_client.get(
                 f"{self.api_url}{path}",
                 headers=self._headers(),
+                follow_redirects=True,
             )
+        except httpx.TooManyRedirects as error:
+            raise GitHubAPIError(
+                "GitHub redirected this repository too many times. Use its current GitHub URL.",
+            ) from error
         except httpx.RequestError as error:
             raise GitHubAPIError(
                 "Unable to connect to GitHub API",
@@ -83,6 +88,12 @@ class GitHubClient:
         if response.status_code == httpx.codes.FORBIDDEN:
             raise GitHubAPIError(
                 "GitHub API request was forbidden or rate limited",
+            )
+
+        if 300 <= response.status_code < 400:
+            raise GitHubAPIError(
+                "GitHub reports that this repository has moved. "
+                "Paste its current GitHub URL and try again.",
             )
 
         try:

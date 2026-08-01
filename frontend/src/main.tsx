@@ -6,6 +6,7 @@ import "./styles/tokens.css";
 import "./styles/globals.css";
 import "./styles/layout.css";
 import "./styles/home.css";
+import "./styles/not-found.css";
 
 const rootElement = document.getElementById("root");
 

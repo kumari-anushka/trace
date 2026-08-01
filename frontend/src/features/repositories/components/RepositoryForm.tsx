@@ -89,11 +89,11 @@ export function RepositoryForm() {
         github_url: trimmedRepositoryUrl,
       },
       {
-        onSuccess: (repository) => {
+        onSuccess: (result) => {
           setRepositoryUrl("");
 
           toast.success("Repository added", {
-            description: `${repository.owner}/${repository.name} was added to your workspace.`,
+            description: `${result.repository.owner}/${result.repository.name} was added. Ingestion is ${result.ingestion_job.status}.`,
           });
 
           window.setTimeout(scrollToRepositories, 150);
