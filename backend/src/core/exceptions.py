@@ -41,12 +41,24 @@ class IngestionJobNotFoundError(TraceError):
     default_message = "Ingestion job not found"
 
 
+class IngestionStageNotFoundError(TraceError):
+    default_message = "Ingestion stage not found"
+
+
 class InvalidIngestionJobTransitionError(TraceError):
     default_message = "Invalid ingestion job status transition"
 
 
 class InvalidIngestionProgressError(TraceError):
     default_message = "Ingestion progress must be between 0 and 100"
+
+
+class InvalidIngestionStageTransitionError(TraceError):
+    default_message = "Invalid ingestion stage status transition"
+
+
+class InvalidIngestionStageProgressError(TraceError):
+    default_message = "Ingestion stage progress must be between 0 and 100"
 
 
 class IngestionDispatchError(TraceError):

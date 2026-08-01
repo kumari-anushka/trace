@@ -92,6 +92,15 @@ class IngestionStageStore:
 
         return ingestion_stage
 
+    async def get_by_id(
+        self,
+        ingestion_stage_id: UUID,
+    ) -> IngestionStage | None:
+        return await self.session.get(
+            IngestionStage,
+            ingestion_stage_id,
+        )
+
     async def list_by_ingestion_job(
         self,
         ingestion_job_id: UUID,

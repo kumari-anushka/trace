@@ -11,9 +11,12 @@ from src.core.exceptions import (
     GitHubRepositoryNotFoundError,
     IngestionDispatchError,
     IngestionJobNotFoundError,
+    IngestionStageNotFoundError,
     InvalidGitHubRepositoryURLError,
     InvalidIngestionJobTransitionError,
     InvalidIngestionProgressError,
+    InvalidIngestionStageProgressError,
+    InvalidIngestionStageTransitionError,
     RepositoryAlreadyExistsError,
     RepositoryNotFoundError,
     RepositoryVersionNotFoundError,
@@ -77,6 +80,11 @@ def create_test_client(
             "Ingestion job not found",
         ),
         (
+            IngestionStageNotFoundError,
+            404,
+            "Ingestion stage not found",
+        ),
+        (
             InvalidIngestionJobTransitionError,
             409,
             "Invalid ingestion job status transition",
@@ -85,6 +93,16 @@ def create_test_client(
             InvalidIngestionProgressError,
             422,
             "Ingestion progress must be between 0 and 100",
+        ),
+        (
+            InvalidIngestionStageTransitionError,
+            409,
+            "Invalid ingestion stage status transition",
+        ),
+        (
+            InvalidIngestionStageProgressError,
+            422,
+            "Ingestion stage progress must be between 0 and 100",
         ),
         (
             IngestionDispatchError,
