@@ -119,7 +119,8 @@ cp frontend/.env.example frontend/.env
 make setup
 ```
 
-For the fastest development loop, run PostgreSQL and Redis in Docker:
+For the fastest development loop, start PostgreSQL and Redis and apply all
+database migrations:
 
 ```bash
 make infra
@@ -141,7 +142,9 @@ make dev
 ```text
 Frontend: http://localhost:5173
 Backend:  http://localhost:8000
+API Base: http://localhost:8000/api
 API Docs: http://localhost:8000/docs
+Health:   http://localhost:8000/health
 ```
 
 Common checks:
@@ -150,6 +153,9 @@ Common checks:
 make test
 make lint
 ```
+
+The backend test suite includes an isolated integration test that uses the
+local PostgreSQL and Redis services. Run `make infra` before `make test`.
 
 Stop the Docker stack:
 

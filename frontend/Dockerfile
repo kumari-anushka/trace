@@ -16,7 +16,7 @@ CMD ["sh", "-c", "npm ci --no-audit --no-fund && exec npm run dev -- --host 0.0.
 
 FROM dependencies AS build
 
-ARG VITE_API_BASE_URL=http://localhost:8000
+ARG VITE_API_BASE_URL=http://localhost:8000/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 COPY . .

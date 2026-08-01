@@ -103,6 +103,43 @@ async def test_get_by_id_returns_none_when_missing() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_active_by_repository_version_returns_active_job() -> None:
+    store, session = make_store()
+    repository_version_id = uuid4()
+    ingestion_job = make_ingestion_job(
+        repository_version_id=repository_version_id,
+        status=IngestionJobStatus.RUNNING,
+    )
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = ingestion_job
+    session.execute.return_value = result
+
+    returned_job = await store.get_active_by_repository_version(
+        repository_version_id,
+    )
+
+    assert returned_job is ingestion_job
+    session.execute.assert_awaited_once()
+    result.scalar_one_or_none.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_get_active_by_repository_version_returns_none() -> None:
+    store, session = make_store()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    session.execute.return_value = result
+
+    returned_job = await store.get_active_by_repository_version(
+        uuid4(),
+    )
+
+    assert returned_job is None
+    session.execute.assert_awaited_once()
+    result.scalar_one_or_none.assert_called_once_with()
+
+
+@pytest.mark.asyncio
 async def test_list_by_repository_version_returns_jobs() -> None:
     store, session = make_store()
     repository_version_id = uuid4()
@@ -160,6 +197,42 @@ async def test_list_by_repository_version_returns_empty_list() -> None:
     session.execute.assert_awaited_once()
     result.scalars.assert_called_once_with()
     scalar_result.all.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_get_latest_by_repository_returns_latest_job() -> None:
+    store, session = make_store()
+    repository_id = uuid4()
+    ingestion_job = make_ingestion_job()
+
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = ingestion_job
+    session.execute.return_value = result
+
+    returned_job = await store.get_latest_by_repository(
+        repository_id,
+    )
+
+    assert returned_job is ingestion_job
+    session.execute.assert_awaited_once()
+    result.scalar_one_or_none.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_get_latest_by_repository_returns_none_when_missing() -> None:
+    store, session = make_store()
+
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    session.execute.return_value = result
+
+    returned_job = await store.get_latest_by_repository(
+        uuid4(),
+    )
+
+    assert returned_job is None
+    session.execute.assert_awaited_once()
+    result.scalar_one_or_none.assert_called_once_with()
 
 
 @pytest.mark.asyncio

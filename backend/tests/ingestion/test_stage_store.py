@@ -65,6 +65,23 @@ async def test_create_adds_pending_stage_and_flushes() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_by_id_returns_stage() -> None:
+    store, session = make_store()
+    ingestion_stage = make_ingestion_stage()
+    session.get.return_value = ingestion_stage
+
+    returned_stage = await store.get_by_id(
+        ingestion_stage.id,
+    )
+
+    assert returned_stage is ingestion_stage
+    session.get.assert_awaited_once_with(
+        IngestionStage,
+        ingestion_stage.id,
+    )
+
+
+@pytest.mark.asyncio
 async def test_list_by_ingestion_job_returns_stages_in_store_order() -> None:
     store, session = make_store()
     ingestion_job_id = uuid4()

@@ -16,13 +16,18 @@ from starlette.status import (
 )
 
 from src.core.exceptions import (
+    ActiveIngestionJobAlreadyExistsError,
     GitHubAPIError,
     GitHubRepositoryNotFoundError,
     IngestionDispatchError,
     IngestionJobNotFoundError,
+    IngestionStageNotFoundError,
     InvalidGitHubRepositoryURLError,
     InvalidIngestionJobTransitionError,
     InvalidIngestionProgressError,
+    InvalidIngestionStageProgressError,
+    InvalidIngestionStageTransitionError,
+    PrivateGitHubRepositoryError,
     RepositoryAlreadyExistsError,
     RepositoryNotFoundError,
     RepositoryVersionAlreadyExistsError,
@@ -34,16 +39,21 @@ logger = logging.getLogger(__name__)
 
 
 ERROR_STATUS_CODES: dict[type[TraceError], int] = {
+    ActiveIngestionJobAlreadyExistsError: HTTP_409_CONFLICT,
     InvalidGitHubRepositoryURLError: HTTP_422_UNPROCESSABLE_CONTENT,
     GitHubRepositoryNotFoundError: HTTP_404_NOT_FOUND,
+    PrivateGitHubRepositoryError: HTTP_422_UNPROCESSABLE_CONTENT,
     GitHubAPIError: HTTP_502_BAD_GATEWAY,
     RepositoryAlreadyExistsError: HTTP_409_CONFLICT,
     RepositoryNotFoundError: HTTP_404_NOT_FOUND,
     RepositoryVersionAlreadyExistsError: HTTP_409_CONFLICT,
     RepositoryVersionNotFoundError: HTTP_404_NOT_FOUND,
     IngestionJobNotFoundError: HTTP_404_NOT_FOUND,
+    IngestionStageNotFoundError: HTTP_404_NOT_FOUND,
     InvalidIngestionJobTransitionError: HTTP_409_CONFLICT,
     InvalidIngestionProgressError: HTTP_422_UNPROCESSABLE_CONTENT,
+    InvalidIngestionStageTransitionError: HTTP_409_CONFLICT,
+    InvalidIngestionStageProgressError: HTTP_422_UNPROCESSABLE_CONTENT,
     IngestionDispatchError: HTTP_503_SERVICE_UNAVAILABLE,
 }
 

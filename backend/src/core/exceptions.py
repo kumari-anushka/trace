@@ -17,6 +17,10 @@ class GitHubRepositoryNotFoundError(TraceError):
     default_message = "GitHub repository not found"
 
 
+class PrivateGitHubRepositoryError(TraceError):
+    default_message = "Private repositories are not supported. Use a public GitHub repository."
+
+
 class GitHubAPIError(TraceError):
     default_message = "GitHub API request failed"
 
@@ -41,12 +45,28 @@ class IngestionJobNotFoundError(TraceError):
     default_message = "Ingestion job not found"
 
 
+class ActiveIngestionJobAlreadyExistsError(TraceError):
+    default_message = "An ingestion job is already active for this repository version"
+
+
+class IngestionStageNotFoundError(TraceError):
+    default_message = "Ingestion stage not found"
+
+
 class InvalidIngestionJobTransitionError(TraceError):
     default_message = "Invalid ingestion job status transition"
 
 
 class InvalidIngestionProgressError(TraceError):
     default_message = "Ingestion progress must be between 0 and 100"
+
+
+class InvalidIngestionStageTransitionError(TraceError):
+    default_message = "Invalid ingestion stage status transition"
+
+
+class InvalidIngestionStageProgressError(TraceError):
+    default_message = "Ingestion stage progress must be between 0 and 100"
 
 
 class IngestionDispatchError(TraceError):

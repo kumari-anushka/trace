@@ -13,6 +13,8 @@ FROM base AS development
 
 RUN uv sync --frozen --no-install-project
 
+COPY alembic.ini ./
+COPY migrations ./migrations
 COPY src ./src
 
 EXPOSE 8000
@@ -23,6 +25,8 @@ FROM base AS production
 
 RUN uv sync --frozen --no-dev --no-install-project
 
+COPY alembic.ini ./
+COPY migrations ./migrations
 COPY src ./src
 
 EXPOSE 8000

@@ -9,12 +9,14 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     SmallInteger,
     String,
     Text,
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy import (
     Enum as SQLEnum,
@@ -35,6 +37,15 @@ class IngestionJobStatus(StrEnum):
     FAILED = "failed"
 
 
+ACTIVE_INGESTION_JOB_STATUSES = (
+    IngestionJobStatus.PENDING,
+    IngestionJobStatus.QUEUED,
+    IngestionJobStatus.RUNNING,
+)
+
+ACTIVE_INGESTION_JOB_INDEX_NAME = "uq_ingestion_jobs_active_repository_version"
+
+
 class IngestionStageStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
@@ -50,6 +61,14 @@ class IngestionJob(Base):
         CheckConstraint(
             "progress >= 0 AND progress <= 100",
             name="progress_range",
+        ),
+        Index(
+            ACTIVE_INGESTION_JOB_INDEX_NAME,
+            "repository_version_id",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('pending', 'queued', 'running')",
+            ),
         ),
     )
 

@@ -7,13 +7,18 @@ from starlette.exceptions import HTTPException
 
 from src.api.exception_handlers import register_exception_handlers
 from src.core.exceptions import (
+    ActiveIngestionJobAlreadyExistsError,
     GitHubAPIError,
     GitHubRepositoryNotFoundError,
     IngestionDispatchError,
     IngestionJobNotFoundError,
+    IngestionStageNotFoundError,
     InvalidGitHubRepositoryURLError,
     InvalidIngestionJobTransitionError,
     InvalidIngestionProgressError,
+    InvalidIngestionStageProgressError,
+    InvalidIngestionStageTransitionError,
+    PrivateGitHubRepositoryError,
     RepositoryAlreadyExistsError,
     RepositoryNotFoundError,
     RepositoryVersionNotFoundError,
@@ -42,6 +47,11 @@ def create_test_client(
     ("exception_factory", "expected_status", "expected_message"),
     [
         (
+            ActiveIngestionJobAlreadyExistsError,
+            409,
+            "An ingestion job is already active for this repository version",
+        ),
+        (
             InvalidGitHubRepositoryURLError,
             422,
             "Invalid GitHub repository URL",
@@ -50,6 +60,11 @@ def create_test_client(
             GitHubRepositoryNotFoundError,
             404,
             "GitHub repository not found",
+        ),
+        (
+            PrivateGitHubRepositoryError,
+            422,
+            "Private repositories are not supported. Use a public GitHub repository.",
         ),
         (
             GitHubAPIError,
@@ -77,6 +92,11 @@ def create_test_client(
             "Ingestion job not found",
         ),
         (
+            IngestionStageNotFoundError,
+            404,
+            "Ingestion stage not found",
+        ),
+        (
             InvalidIngestionJobTransitionError,
             409,
             "Invalid ingestion job status transition",
@@ -85,6 +105,16 @@ def create_test_client(
             InvalidIngestionProgressError,
             422,
             "Ingestion progress must be between 0 and 100",
+        ),
+        (
+            InvalidIngestionStageTransitionError,
+            409,
+            "Invalid ingestion stage status transition",
+        ),
+        (
+            InvalidIngestionStageProgressError,
+            422,
+            "Ingestion stage progress must be between 0 and 100",
         ),
         (
             IngestionDispatchError,

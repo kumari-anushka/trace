@@ -59,7 +59,7 @@ def test_list_repository_versions_returns_versions(
     override_repository_version_service(app, service)
 
     response = client.get(
-        "/repository-versions",
+        "/api/repository-versions",
         params={
             "repository_id": str(repository_id),
         },
@@ -99,7 +99,7 @@ def test_list_repository_versions_returns_empty_list(
     override_repository_version_service(app, service)
 
     response = client.get(
-        "/repository-versions",
+        "/api/repository-versions",
         params={
             "repository_id": str(repository_id),
         },
@@ -122,7 +122,7 @@ def test_list_repository_versions_returns_422_without_repository_id(
     override_repository_version_service(app, service)
 
     response = client.get(
-        "/repository-versions",
+        "/api/repository-versions",
     )
 
     assert response.status_code == 422
@@ -140,7 +140,7 @@ def test_list_repository_versions_returns_422_for_invalid_repository_id(
     override_repository_version_service(app, service)
 
     response = client.get(
-        "/repository-versions",
+        "/api/repository-versions",
         params={
             "repository_id": "not-a-uuid",
         },
@@ -164,7 +164,7 @@ def test_get_repository_version_returns_version(
     override_repository_version_service(app, service)
 
     response = client.get(
-        f"/repository-versions/{repository_version.id}",
+        f"/api/repository-versions/{repository_version.id}",
     )
 
     assert response.status_code == 200
@@ -195,7 +195,7 @@ def test_get_repository_version_returns_404_when_missing(
     override_repository_version_service(app, service)
 
     response = client.get(
-        f"/repository-versions/{repository_version_id}",
+        f"/api/repository-versions/{repository_version_id}",
     )
 
     assert response.status_code == 404
@@ -217,7 +217,7 @@ def test_get_repository_version_returns_422_for_invalid_uuid(
     override_repository_version_service(app, service)
 
     response = client.get(
-        "/repository-versions/not-a-uuid",
+        "/api/repository-versions/not-a-uuid",
     )
 
     assert response.status_code == 422

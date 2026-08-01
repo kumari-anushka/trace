@@ -7,13 +7,21 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.core.exceptions import (
+    IngestionJobNotFoundError,
     InvalidGitHubRepositoryURLError,
+    PrivateGitHubRepositoryError,
     RepositoryAlreadyExistsError,
     RepositoryNotFoundError,
 )
-from src.ingestion.models import IngestionJob, IngestionJobStatus
+from src.ingestion.models import (
+    IngestionJob,
+    IngestionJobStatus,
+    IngestionStage,
+    IngestionStageStatus,
+)
 from src.repositories.dependencies import (
     get_repository_import_service,
+    get_repository_ingestion_service,
     get_repository_service,
 )
 from src.repositories.import_service import (
@@ -21,7 +29,11 @@ from src.repositories.import_service import (
     RepositoryImportService,
 )
 from src.repositories.models import Repository
-from src.repositories.service import RepositoryService
+from src.repositories.service import (
+    RepositoryIngestionService,
+    RepositoryIngestionStatus,
+    RepositoryService,
+)
 from src.repository_versions.models import RepositoryVersion
 
 GITHUB_URL = "https://github.com/kumari-anushka/trace"
@@ -82,6 +94,27 @@ def make_ingestion_job(
     return ingestion_job
 
 
+def make_ingestion_stage(
+    ingestion_job: IngestionJob,
+) -> IngestionStage:
+    now = datetime.now(UTC)
+    ingestion_stage = IngestionStage(
+        ingestion_job_id=ingestion_job.id,
+        name="prepare_repository_snapshot",
+        position=0,
+        status=IngestionStageStatus.RUNNING,
+        progress=40,
+    )
+    ingestion_stage.id = uuid4()
+    ingestion_stage.created_at = now
+    ingestion_stage.updated_at = now
+    ingestion_stage.started_at = now
+    ingestion_stage.completed_at = None
+    ingestion_stage.error_message = None
+
+    return ingestion_stage
+
+
 def override_repository_import_service(
     app: FastAPI,
     service: AsyncMock,
@@ -102,6 +135,16 @@ def override_repository_service(
     app.dependency_overrides[get_repository_service] = dependency_override
 
 
+def override_repository_ingestion_service(
+    app: FastAPI,
+    service: AsyncMock,
+) -> None:
+    def dependency_override() -> RepositoryIngestionService:
+        return cast(RepositoryIngestionService, service)
+
+    app.dependency_overrides[get_repository_ingestion_service] = dependency_override
+
+
 def test_import_repository_returns_created_resources(
     app: FastAPI,
     client: TestClient,
@@ -120,7 +163,7 @@ def test_import_repository_returns_created_resources(
     override_repository_import_service(app, service)
 
     response = client.post(
-        "/repositories",
+        "/api/repositories",
         json={
             "github_url": GITHUB_URL,
         },
@@ -163,7 +206,7 @@ def test_import_repository_returns_422_for_invalid_url(
     override_repository_import_service(app, service)
 
     response = client.post(
-        "/repositories",
+        "/api/repositories",
         json={
             "github_url": ("https://github.com/kumari-anushka/trace.git"),
         },
@@ -188,7 +231,7 @@ def test_import_repository_returns_422_for_malformed_url(
     override_repository_import_service(app, service)
 
     response = client.post(
-        "/repositories",
+        "/api/repositories",
         json={
             "github_url": "not-a-url",
         },
@@ -205,6 +248,27 @@ def test_import_repository_returns_422_for_malformed_url(
     service.import_repository.assert_not_awaited()
 
 
+def test_import_repository_returns_422_for_private_repository(
+    app: FastAPI,
+    client: TestClient,
+) -> None:
+    service = AsyncMock(spec=RepositoryImportService)
+    service.import_repository.side_effect = PrivateGitHubRepositoryError()
+    override_repository_import_service(app, service)
+
+    response = client.post(
+        "/api/repositories",
+        json={
+            "github_url": GITHUB_URL,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "message": ("Private repositories are not supported. Use a public GitHub repository."),
+    }
+
+
 def test_import_repository_returns_409_when_repository_exists(
     app: FastAPI,
     client: TestClient,
@@ -215,7 +279,7 @@ def test_import_repository_returns_409_when_repository_exists(
     override_repository_import_service(app, service)
 
     response = client.post(
-        "/repositories",
+        "/api/repositories",
         json={
             "github_url": GITHUB_URL,
         },
@@ -241,7 +305,7 @@ def test_list_repositories_returns_repositories(
 
     override_repository_service(app, service)
 
-    response = client.get("/repositories")
+    response = client.get("/api/repositories")
 
     assert response.status_code == 200
 
@@ -263,12 +327,98 @@ def test_list_repositories_returns_empty_list(
 
     override_repository_service(app, service)
 
-    response = client.get("/repositories")
+    response = client.get("/api/repositories")
 
     assert response.status_code == 200
     assert response.json() == {
         "repositories": [],
     }
+
+
+def test_get_repository_ingestion_status_returns_job_and_stages(
+    app: FastAPI,
+    client: TestClient,
+) -> None:
+    repository = make_repository()
+    repository_version = make_repository_version(repository)
+    ingestion_job = make_ingestion_job(repository_version)
+    ingestion_stage = make_ingestion_stage(ingestion_job)
+    service = AsyncMock(spec=RepositoryIngestionService)
+    service.get_status.return_value = RepositoryIngestionStatus(
+        repository_id=repository.id,
+        ingestion_job=ingestion_job,
+        stages=[ingestion_stage],
+    )
+
+    override_repository_ingestion_service(app, service)
+
+    response = client.get(
+        f"/api/repositories/{repository.id}/ingestion",
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["repository_id"] == str(repository.id)
+    assert body["ingestion_job"]["id"] == str(ingestion_job.id)
+    assert body["ingestion_job"]["status"] == "queued"
+    assert body["stages"][0]["id"] == str(ingestion_stage.id)
+    assert body["stages"][0]["name"] == "prepare_repository_snapshot"
+    assert body["stages"][0]["progress"] == 40
+    service.get_status.assert_awaited_once_with(repository.id)
+
+
+def test_get_repository_ingestion_status_returns_404_when_repository_missing(
+    app: FastAPI,
+    client: TestClient,
+) -> None:
+    repository_id = uuid4()
+    service = AsyncMock(spec=RepositoryIngestionService)
+    service.get_status.side_effect = RepositoryNotFoundError()
+    override_repository_ingestion_service(app, service)
+
+    response = client.get(
+        f"/api/repositories/{repository_id}/ingestion",
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "message": "Repository not found",
+    }
+
+
+def test_get_repository_ingestion_status_returns_404_when_job_missing(
+    app: FastAPI,
+    client: TestClient,
+) -> None:
+    repository_id = uuid4()
+    service = AsyncMock(spec=RepositoryIngestionService)
+    service.get_status.side_effect = IngestionJobNotFoundError()
+    override_repository_ingestion_service(app, service)
+
+    response = client.get(
+        f"/api/repositories/{repository_id}/ingestion",
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "message": "Ingestion job not found",
+    }
+
+
+def test_get_repository_ingestion_status_returns_422_for_invalid_uuid(
+    app: FastAPI,
+    client: TestClient,
+) -> None:
+    service = AsyncMock(spec=RepositoryIngestionService)
+    override_repository_ingestion_service(app, service)
+
+    response = client.get(
+        "/api/repositories/not-a-uuid/ingestion",
+    )
+
+    assert response.status_code == 422
+    assert response.json()["message"] == "Invalid request"
+    service.get_status.assert_not_awaited()
 
 
 def test_get_repository_returns_repository(
@@ -283,7 +433,7 @@ def test_get_repository_returns_repository(
     override_repository_service(app, service)
 
     response = client.get(
-        f"/repositories/{repository.id}",
+        f"/api/repositories/{repository.id}",
     )
 
     assert response.status_code == 200
@@ -307,7 +457,7 @@ def test_get_repository_returns_404_when_missing(
     override_repository_service(app, service)
 
     response = client.get(
-        f"/repositories/{repository_id}",
+        f"/api/repositories/{repository_id}",
     )
 
     assert response.status_code == 404
@@ -325,7 +475,7 @@ def test_get_repository_returns_422_for_invalid_uuid(
     override_repository_service(app, service)
 
     response = client.get(
-        "/repositories/not-a-uuid",
+        "/api/repositories/not-a-uuid",
     )
 
     assert response.status_code == 422
@@ -345,7 +495,7 @@ def test_delete_repository_returns_success_message(
     override_repository_service(app, service)
 
     response = client.delete(
-        f"/repositories/{repository_id}",
+        f"/api/repositories/{repository_id}",
     )
 
     assert response.status_code == 200
@@ -370,7 +520,7 @@ def test_delete_repository_returns_404_when_missing(
     override_repository_service(app, service)
 
     response = client.delete(
-        f"/repositories/{repository_id}",
+        f"/api/repositories/{repository_id}",
     )
 
     assert response.status_code == 404

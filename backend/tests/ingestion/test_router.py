@@ -57,7 +57,7 @@ def test_get_ingestion_job_returns_job(
     override_ingestion_service(app, service)
 
     response = client.get(
-        f"/ingestion-jobs/{ingestion_job.id}",
+        f"/api/ingestion-jobs/{ingestion_job.id}",
     )
 
     assert response.status_code == 200
@@ -96,7 +96,7 @@ def test_get_ingestion_job_returns_failed_job(
     override_ingestion_service(app, service)
 
     response = client.get(
-        f"/ingestion-jobs/{ingestion_job.id}",
+        f"/api/ingestion-jobs/{ingestion_job.id}",
     )
 
     assert response.status_code == 200
@@ -121,7 +121,7 @@ def test_get_ingestion_job_returns_404_when_missing(
     override_ingestion_service(app, service)
 
     response = client.get(
-        f"/ingestion-jobs/{ingestion_job_id}",
+        f"/api/ingestion-jobs/{ingestion_job_id}",
     )
 
     assert response.status_code == 404
@@ -143,7 +143,7 @@ def test_get_ingestion_job_returns_422_for_invalid_uuid(
     override_ingestion_service(app, service)
 
     response = client.get(
-        "/ingestion-jobs/not-a-uuid",
+        "/api/ingestion-jobs/not-a-uuid",
     )
 
     assert response.status_code == 422

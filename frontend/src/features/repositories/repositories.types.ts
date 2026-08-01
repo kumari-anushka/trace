@@ -36,6 +36,29 @@ export type IngestionJob = {
   completed_at: string | null;
 };
 
+export type IngestionStageStatus =
+  "pending" | "running" | "completed" | "failed" | "skipped";
+
+export type IngestionStage = {
+  id: string;
+  ingestion_job_id: string;
+  name: string;
+  position: number;
+  status: IngestionStageStatus;
+  progress: number;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+export type RepositoryIngestionStatus = {
+  repository_id: string;
+  ingestion_job: IngestionJob;
+  stages: IngestionStage[];
+};
+
 export type RepositoryImportResponse = {
   repository: Repository;
   repository_version: RepositoryVersion;
