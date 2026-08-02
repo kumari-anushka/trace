@@ -3,16 +3,21 @@ import logging
 import os
 import socket
 
+import httpx
 from redis.asyncio import Redis
 
 from src.core.config import get_settings
 from src.db import models as _models  # noqa: F401
 from src.db.session import async_session_factory, engine
-from src.ingestion.processor import FoundationIngestionProcessor
+from src.github.client import GitHubClient
+from src.github.store import GitHubArtifactStore
+from src.ingestion.processor import GitHubIngestionLimits, GitHubIngestionProcessor
 from src.ingestion.queue import RedisIngestionConsumer
 from src.ingestion.runner import IngestionWorker
 from src.ingestion.service import IngestionService, IngestionStageService
 from src.ingestion.store import IngestionJobStore, IngestionStageStore
+from src.repositories.service import RepositoryService
+from src.repositories.store import RepositoryStore
 from src.repository_versions.service import RepositoryVersionService
 from src.repository_versions.store import RepositoryVersionStore
 
@@ -29,7 +34,10 @@ async def run_worker() -> None:
     consumer_name = f"{socket.gethostname()}-{os.getpid()}"
 
     try:
-        async with async_session_factory() as session:
+        async with (
+            async_session_factory() as session,
+            httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as github_http_client,
+        ):
             ingestion_service = IngestionService(
                 store=IngestionJobStore(session=session),
             )
@@ -39,11 +47,36 @@ async def run_worker() -> None:
             repository_version_service = RepositoryVersionService(
                 store=RepositoryVersionStore(session=session),
             )
-            processor = FoundationIngestionProcessor(
+            repository_store = RepositoryStore(session=session)
+            processor = GitHubIngestionProcessor(
                 session=session,
                 ingestion_service=ingestion_service,
                 stage_service=stage_service,
                 repository_version_service=repository_version_service,
+                repository_service=RepositoryService(
+                    session=session,
+                    store=repository_store,
+                ),
+                github_client=GitHubClient(
+                    http_client=github_http_client,
+                    api_url=settings.github_api_url,
+                    token=settings.github_token,
+                    max_retries=settings.github_max_retries,
+                    max_retry_delay_seconds=settings.github_max_retry_delay_seconds,
+                ),
+                artifact_store=GitHubArtifactStore(session=session),
+                limits=GitHubIngestionLimits(
+                    labels=settings.github_label_limit,
+                    issues=settings.github_issue_limit,
+                    pull_requests=settings.github_pull_request_limit,
+                    reviews_per_pull_request=(settings.github_review_limit_per_pull_request),
+                    changed_files_per_artifact=(settings.github_changed_file_limit_per_artifact),
+                    commits=settings.github_commit_limit,
+                    releases=settings.github_release_limit,
+                    contributors=settings.github_contributor_limit,
+                    archive_max_bytes=settings.github_archive_max_bytes,
+                    source_file_max_bytes=settings.github_source_file_max_bytes,
+                ),
             )
             worker = IngestionWorker(
                 session=session,

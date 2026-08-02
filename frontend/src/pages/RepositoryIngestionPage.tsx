@@ -109,6 +109,11 @@ function getStageIcon(status: IngestionStageStatus): ReactNode {
 }
 
 function StageRow({ stage }: { stage: IngestionStage }) {
+  const summaryEntries = Object.entries(stage.output_summary ?? {}).filter(
+    (entry): entry is [string, number] =>
+      !entry[0].startsWith("_") && typeof entry[1] === "number",
+  );
+
   return (
     <li className="ingestion-stage" data-status={stage.status}>
       <span className="ingestion-stage__rail" aria-hidden="true" />
@@ -140,6 +145,17 @@ function StageRow({ stage }: { stage: IngestionStage }) {
 
         {stage.error_message ? (
           <p className="ingestion-stage__error">{stage.error_message}</p>
+        ) : null}
+
+        {summaryEntries.length > 0 ? (
+          <dl className="ingestion-stage__summary">
+            {summaryEntries.map(([name, value]) => (
+              <div key={name}>
+                <dt>{formatStageName(name)}</dt>
+                <dd>{value.toLocaleString()}</dd>
+              </div>
+            ))}
+          </dl>
         ) : null}
       </div>
     </li>

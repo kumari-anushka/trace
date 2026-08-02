@@ -1,0 +1,34 @@
+{
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "truncated": false,
+  "tree": [
+    {
+      "path": "src/main.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size": 120
+    },
+    {
+      "path": "tests/test_main.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "size": 88
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dddddddddddddddddddddddddddddddddddddddd",
+      "size": 300
+    },
+    {
+      "path": "public/logo.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "size": 2048
+    }
+  ]
+}

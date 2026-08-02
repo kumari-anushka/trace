@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import IngestionJobNotFoundError
+from src.core.exceptions import IngestionJobNotFoundError, RetryableGitHubAPIError
 from src.ingestion.models import IngestionJob, IngestionJobStatus
 from src.ingestion.queue import (
     IngestionConsumer,
@@ -154,6 +154,22 @@ async def test_run_once_records_processor_failure_before_acknowledging() -> None
 
 
 @pytest.mark.asyncio
+async def test_run_once_leaves_retryable_provider_failure_pending() -> None:
+    worker, session, consumer, ingestion_service, processor = make_worker()
+    ingestion_job = make_ingestion_job()
+    consumer.read.return_value = make_message(ingestion_job.id)
+    ingestion_service.get_job.return_value = ingestion_job
+    processor.process.side_effect = RetryableGitHubAPIError("GitHub unavailable")
+
+    processed = await worker.run_once()
+
+    assert processed is True
+    ingestion_service.mark_failed.assert_not_awaited()
+    consumer.acknowledge.assert_not_awaited()
+    session.rollback.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio
 async def test_run_once_does_not_acknowledge_database_failure() -> None:
     worker, session, consumer, ingestion_service, processor = make_worker()
     ingestion_job = make_ingestion_job()
@@ -237,3 +253,16 @@ async def test_run_once_returns_false_when_stream_is_idle() -> None:
     ingestion_service.get_job.assert_not_awaited()
     processor.process.assert_not_awaited()
     consumer.acknowledge.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_recover_running_jobs_requeues_database_orphans() -> None:
+    worker, _, consumer, ingestion_service, _ = make_worker()
+    running_job = make_ingestion_job(status=IngestionJobStatus.RUNNING)
+    ingestion_service.list_running_jobs.return_value = [running_job]
+    consumer.recover.return_value = 1
+
+    recovered = await worker.recover_running_jobs()
+
+    assert recovered == 1
+    consumer.recover.assert_awaited_once_with([running_job.id])

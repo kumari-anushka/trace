@@ -20,6 +20,18 @@ class Settings(BaseSettings):
 
     github_api_url: str = "https://api.github.com"
     github_token: str | None = None
+    github_max_retries: int = 3
+    github_max_retry_delay_seconds: float = 30.0
+    github_issue_limit: int = 200
+    github_pull_request_limit: int = 100
+    github_review_limit_per_pull_request: int = 100
+    github_changed_file_limit_per_artifact: int = 300
+    github_commit_limit: int = 100
+    github_release_limit: int = 100
+    github_contributor_limit: int = 100
+    github_label_limit: int = 200
+    github_archive_max_bytes: int = 250_000_000
+    github_source_file_max_bytes: int = 1_000_000
 
     cors_origins: str = "http://localhost:5173"
 

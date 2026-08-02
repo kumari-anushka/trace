@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -62,6 +63,16 @@ class RepositoryVersion(Base):
         String(255),
         nullable=False,
     )
+
+    languages: Mapped[dict[str, int] | None] = mapped_column(JSON, nullable=True)
+
+    source_tree_truncated: Mapped[bool] = mapped_column(
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
+    source_tree_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

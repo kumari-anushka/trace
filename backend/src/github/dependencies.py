@@ -16,4 +16,6 @@ def get_github_client(
         http_client=http_client,
         api_url=settings.github_api_url,
         token=settings.github_token,
+        max_retries=settings.github_max_retries,
+        max_retry_delay_seconds=settings.github_max_retry_delay_seconds,
     )

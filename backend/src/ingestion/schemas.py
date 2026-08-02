@@ -18,6 +18,7 @@ class IngestionStageResponse(BaseModel):
     status: IngestionStageStatus
     progress: int
     error_message: str | None
+    output_summary: dict[str, object] | None
     created_at: datetime
     updated_at: datetime
     started_at: datetime | None

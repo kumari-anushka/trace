@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -108,6 +109,11 @@ class IngestionJob(Base):
 
     error_message: Mapped[str | None] = mapped_column(
         Text,
+        nullable=True,
+    )
+
+    output_summary: Mapped[dict[str, object] | None] = mapped_column(
+        JSON,
         nullable=True,
     )
 
@@ -216,6 +222,11 @@ class IngestionStage(Base):
 
     error_message: Mapped[str | None] = mapped_column(
         Text,
+        nullable=True,
+    )
+
+    output_summary: Mapped[dict[str, object] | None] = mapped_column(
+        JSON,
         nullable=True,
     )
 

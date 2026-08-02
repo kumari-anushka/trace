@@ -20,6 +20,8 @@ def make_redis_client() -> tuple[Redis, AsyncMock]:
     xadd_mock = AsyncMock()
 
     redis_client.xadd = xadd_mock
+    redis_client.hset = AsyncMock()
+    xadd_mock.return_value = "123-0"
 
     return redis_client, xadd_mock
 
@@ -293,3 +295,42 @@ async def test_read_returns_stale_claimed_message_before_new_message() -> None:
     assert message.entry_id == "old-0"
     assert message.ingestion_job_id == ingestion_job_id
     xreadgroup_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_recover_requeues_running_job_without_pending_message() -> None:
+    redis_client = MagicMock(spec=Redis)
+    redis_client.hget = AsyncMock(return_value="old-0")
+    redis_client.execute_command = AsyncMock(return_value=[])
+    redis_client.xadd = AsyncMock(return_value="new-0")
+    redis_client.hset = AsyncMock()
+    consumer = RedisIngestionConsumer(
+        redis_client=redis_client,
+        consumer_name="worker-1",
+    )
+    ingestion_job_id = uuid4()
+
+    recovered = await consumer.recover([ingestion_job_id])
+
+    assert recovered == 1
+    redis_client.xadd.assert_awaited_once_with(
+        INGESTION_STREAM_NAME,
+        {"ingestion_job_id": str(ingestion_job_id)},
+    )
+
+
+@pytest.mark.asyncio
+async def test_recover_keeps_existing_pending_message() -> None:
+    redis_client = MagicMock(spec=Redis)
+    redis_client.hget = AsyncMock(return_value="old-0")
+    redis_client.execute_command = AsyncMock(return_value=[["old-0", "worker", 100, 1]])
+    redis_client.xadd = AsyncMock()
+    consumer = RedisIngestionConsumer(
+        redis_client=redis_client,
+        consumer_name="worker-1",
+    )
+
+    recovered = await consumer.recover([uuid4()])
+
+    assert recovered == 0
+    redis_client.xadd.assert_not_awaited()

@@ -14,7 +14,6 @@ from src.core.exceptions import (
 from src.github.client import GitHubClient
 from src.github.schemas import (
     GitHubCommit,
-    GitHubOwner,
     GitHubRepository,
 )
 from src.ingestion.models import (
@@ -36,18 +35,18 @@ COMMIT_SHA = "a" * 40
 
 
 def make_github_repository() -> GitHubRepository:
-    return GitHubRepository(
-        id=123456789,
-        name="trace",
-        full_name="kumari-anushka/trace",
-        html_url=GITHUB_URL,
-        default_branch="main",
-        private=False,
-        archived=False,
-        disabled=False,
-        owner=GitHubOwner(
-            login="kumari-anushka",
-        ),
+    return GitHubRepository.model_validate(
+        {
+            "id": 123456789,
+            "name": "trace",
+            "full_name": "kumari-anushka/trace",
+            "html_url": GITHUB_URL,
+            "default_branch": "main",
+            "private": False,
+            "archived": False,
+            "disabled": False,
+            "owner": {"login": "kumari-anushka"},
+        }
     )
 
 

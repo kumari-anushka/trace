@@ -13,4 +13,7 @@ class RepositoryVersionResponse(BaseModel):
     repository_id: UUID
     commit_sha: str
     branch: str
+    languages: dict[str, int] | None
+    source_tree_sha: str | None
+    source_tree_truncated: bool | None
     created_at: datetime

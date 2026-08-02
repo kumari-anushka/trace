@@ -5,6 +5,18 @@ export type Repository = {
   name: string;
   github_url: string;
   default_branch: string;
+  description: string | null;
+  homepage: string | null;
+  primary_language: string | null;
+  stars_count: number | null;
+  forks_count: number | null;
+  watchers_count: number | null;
+  open_issues_count: number | null;
+  archived: boolean | null;
+  disabled: boolean | null;
+  provider_created_at: string | null;
+  provider_updated_at: string | null;
+  provider_pushed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -18,6 +30,9 @@ export type RepositoryVersion = {
   repository_id: string;
   commit_sha: string;
   branch: string;
+  languages: Record<string, number> | null;
+  source_tree_sha: string | null;
+  source_tree_truncated: boolean | null;
   created_at: string;
 };
 
@@ -47,6 +62,7 @@ export type IngestionStage = {
   status: IngestionStageStatus;
   progress: number;
   error_message: string | null;
+  output_summary: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   started_at: string | null;

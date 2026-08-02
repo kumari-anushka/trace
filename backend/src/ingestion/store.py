@@ -81,6 +81,12 @@ class IngestionJobStore:
 
         return result.scalars().all()
 
+    async def list_running(self) -> Sequence[IngestionJob]:
+        result = await self.session.execute(
+            select(IngestionJob).where(IngestionJob.status == IngestionJobStatus.RUNNING)
+        )
+        return result.scalars().all()
+
     async def get_latest_by_repository(
         self,
         repository_id: UUID,

@@ -22,6 +22,18 @@ class RepositoryResponse(BaseModel):
     owner: str
     name: str
     default_branch: str
+    description: str | None
+    homepage: str | None
+    primary_language: str | None
+    stars_count: int | None
+    forks_count: int | None
+    watchers_count: int | None
+    open_issues_count: int | None
+    archived: bool | None
+    disabled: bool | None
+    provider_created_at: datetime | None
+    provider_updated_at: datetime | None
+    provider_pushed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
