@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol, cast
 from uuid import UUID
@@ -7,6 +8,7 @@ from redis.exceptions import ResponseError
 
 INGESTION_STREAM_NAME = "trace:ingestion:jobs"
 INGESTION_CONSUMER_GROUP = "trace:ingestion:workers"
+INGESTION_JOB_ENTRY_HASH = "trace:ingestion:job-entries"
 
 RedisValue = str | bytes
 RedisStreamResponse = list[
@@ -49,6 +51,8 @@ class IngestionConsumer(Protocol):
 
     async def acknowledge(self, entry_id: str) -> None: ...
 
+    async def recover(self, ingestion_job_ids: Sequence[UUID]) -> int: ...
+
 
 class RedisIngestionQueue:
     def __init__(
@@ -56,20 +60,27 @@ class RedisIngestionQueue:
         *,
         redis_client: Redis,
         stream_name: str = INGESTION_STREAM_NAME,
+        job_entry_hash: str = INGESTION_JOB_ENTRY_HASH,
     ) -> None:
         self.redis_client = redis_client
         self.stream_name = stream_name
+        self.job_entry_hash = job_entry_hash
 
     async def enqueue(
         self,
         *,
         ingestion_job_id: UUID,
     ) -> None:
-        await self.redis_client.xadd(
+        entry_id = await self.redis_client.xadd(
             self.stream_name,
             {
                 "ingestion_job_id": str(ingestion_job_id),
             },
+        )
+        await self.redis_client.hset(
+            self.job_entry_hash,
+            str(ingestion_job_id),
+            entry_id,
         )
 
 
@@ -83,6 +94,7 @@ class RedisIngestionConsumer:
         group_name: str = INGESTION_CONSUMER_GROUP,
         block_milliseconds: int = 5_000,
         claim_min_idle_milliseconds: int = 60_000,
+        job_entry_hash: str = INGESTION_JOB_ENTRY_HASH,
     ) -> None:
         self.redis_client = redis_client
         self.consumer_name = consumer_name
@@ -90,6 +102,8 @@ class RedisIngestionConsumer:
         self.group_name = group_name
         self.block_milliseconds = block_milliseconds
         self.claim_min_idle_milliseconds = claim_min_idle_milliseconds
+        self.job_entry_hash = job_entry_hash
+        self._message_job_ids: dict[str, UUID] = {}
 
     async def ensure_group(self) -> None:
         try:
@@ -185,10 +199,12 @@ class RedisIngestionConsumer:
                 message="Ingestion message contains an invalid ingestion_job_id",
             ) from error
 
-        return IngestionMessage(
+        message = IngestionMessage(
             entry_id=entry_id,
             ingestion_job_id=ingestion_job_id,
         )
+        self._message_job_ids[entry_id] = ingestion_job_id
+        return message
 
     async def acknowledge(self, entry_id: str) -> None:
         await self.redis_client.xack(
@@ -196,6 +212,46 @@ class RedisIngestionConsumer:
             self.group_name,
             entry_id,
         )
+        ingestion_job_id = self._message_job_ids.pop(entry_id, None)
+        if ingestion_job_id is None:
+            return
+        mapped_entry = await self.redis_client.hget(
+            self.job_entry_hash,
+            str(ingestion_job_id),
+        )
+        if mapped_entry is not None and self._decode(mapped_entry) == entry_id:
+            await self.redis_client.hdel(self.job_entry_hash, str(ingestion_job_id))
+
+    async def recover(self, ingestion_job_ids: Sequence[UUID]) -> int:
+        recovered = 0
+        for ingestion_job_id in ingestion_job_ids:
+            mapped_entry = await self.redis_client.hget(
+                self.job_entry_hash,
+                str(ingestion_job_id),
+            )
+            if mapped_entry is not None:
+                entry_id = self._decode(mapped_entry)
+                pending: Any = await self.redis_client.execute_command(  # type: ignore[no-untyped-call]
+                    "XPENDING",
+                    self.stream_name,
+                    self.group_name,
+                    entry_id,
+                    entry_id,
+                    1,
+                )
+                if pending:
+                    continue
+            new_entry_id = await self.redis_client.xadd(
+                self.stream_name,
+                {"ingestion_job_id": str(ingestion_job_id)},
+            )
+            await self.redis_client.hset(
+                self.job_entry_hash,
+                str(ingestion_job_id),
+                new_entry_id,
+            )
+            recovered += 1
+        return recovered
 
     @staticmethod
     def _decode(value: RedisValue) -> str:

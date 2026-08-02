@@ -1,4 +1,8 @@
+from dataclasses import dataclass
+from hashlib import sha256
+from io import BytesIO
 from pathlib import PurePosixPath
+from zipfile import BadZipFile, ZipFile
 
 from src.github.models import SourceFileKind
 
@@ -76,6 +80,24 @@ SOURCE_LANGUAGES = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class ArchiveTextFile:
+    path: str
+    content: str
+    content_hash: str
+    encoding: str
+    byte_size: int
+    line_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class ArchiveExtraction:
+    files: list[ArchiveTextFile]
+    skipped_large: int
+    skipped_non_text: int
+    missing: int
+
+
 def normalize_repository_path(path: str) -> str:
     normalized = PurePosixPath(path)
     if normalized.is_absolute() or not normalized.parts or ".." in normalized.parts:
@@ -107,3 +129,66 @@ def classify_source_file(path: str) -> tuple[SourceFileKind, str | None]:
     ):
         return SourceFileKind.TEST, SOURCE_LANGUAGES.get(suffix)
     return SourceFileKind.SOURCE, SOURCE_LANGUAGES.get(suffix)
+
+
+def extract_text_files_from_zip(
+    archive: bytes,
+    *,
+    allowed_paths: set[str],
+    max_file_bytes: int,
+) -> ArchiveExtraction:
+    extracted: list[ArchiveTextFile] = []
+    skipped_large = 0
+    skipped_non_text = 0
+    seen: set[str] = set()
+
+    try:
+        zip_file = ZipFile(BytesIO(archive))
+    except BadZipFile as error:
+        raise ValueError("GitHub returned an invalid repository archive") from error
+
+    with zip_file:
+        for entry in zip_file.infolist():
+            if entry.is_dir():
+                continue
+            parts = PurePosixPath(entry.filename).parts
+            if len(parts) < 2:
+                continue
+            path = normalize_repository_path(PurePosixPath(*parts[1:]).as_posix())
+            if path not in allowed_paths:
+                continue
+            seen.add(path)
+            if entry.file_size > max_file_bytes:
+                skipped_large += 1
+                continue
+            raw_content = zip_file.read(entry)
+            if b"\x00" in raw_content:
+                skipped_non_text += 1
+                continue
+            try:
+                decoded = raw_content.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                skipped_non_text += 1
+                continue
+            normalized_content = decoded.replace("\r\n", "\n").replace("\r", "\n")
+            normalized_bytes = normalized_content.encode("utf-8")
+            extracted.append(
+                ArchiveTextFile(
+                    path=path,
+                    content=normalized_content,
+                    content_hash=sha256(normalized_bytes).hexdigest(),
+                    encoding="utf-8",
+                    byte_size=len(normalized_bytes),
+                    line_count=(
+                        normalized_content.count("\n")
+                        + (1 if normalized_content and not normalized_content.endswith("\n") else 0)
+                    ),
+                )
+            )
+
+    return ArchiveExtraction(
+        files=extracted,
+        skipped_large=skipped_large,
+        skipped_non_text=skipped_non_text,
+        missing=len(allowed_paths - seen),
+    )

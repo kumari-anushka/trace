@@ -253,3 +253,16 @@ async def test_run_once_returns_false_when_stream_is_idle() -> None:
     ingestion_service.get_job.assert_not_awaited()
     processor.process.assert_not_awaited()
     consumer.acknowledge.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_recover_running_jobs_requeues_database_orphans() -> None:
+    worker, _, consumer, ingestion_service, _ = make_worker()
+    running_job = make_ingestion_job(status=IngestionJobStatus.RUNNING)
+    ingestion_service.list_running_jobs.return_value = [running_job]
+    consumer.recover.return_value = 1
+
+    recovered = await worker.recover_running_jobs()
+
+    assert recovered == 1
+    consumer.recover.assert_awaited_once_with([running_job.id])

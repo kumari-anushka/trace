@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 
-from src.core.exceptions import GitHubRateLimitError
+from src.core.exceptions import GitHubAPIError, GitHubRateLimitError
 from src.github.client import GitHubClient
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "github"
@@ -176,3 +176,55 @@ async def test_truncated_tree_falls_back_to_non_recursive_walk() -> None:
     assert tree.truncated is False
     assert [entry.path for entry in tree.tree] == ["src", "src/main.py"]
     assert len(requested_urls) == 3
+
+
+@pytest.mark.asyncio
+async def test_download_snapshot_archive_uses_fixed_commit_sha() -> None:
+    archive = b"PK-test-archive"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith(f"/zipball/{'a' * 40}")
+        return httpx.Response(200, content=archive, request=request)
+
+    http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    client = GitHubClient(
+        http_client=http_client,
+        api_url="https://api.github.test",
+        token=None,
+        max_retries=0,
+    )
+    try:
+        result = await client.download_snapshot_archive(
+            owner="acme",
+            name="trace",
+            commit_sha="a" * 40,
+            max_bytes=100,
+        )
+    finally:
+        await http_client.aclose()
+
+    assert result == archive
+
+
+@pytest.mark.asyncio
+async def test_download_snapshot_archive_enforces_size_limit() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"too-large", request=request)
+
+    http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    client = GitHubClient(
+        http_client=http_client,
+        api_url="https://api.github.test",
+        token=None,
+        max_retries=0,
+    )
+    try:
+        with pytest.raises(GitHubAPIError, match="archive exceeds"):
+            await client.download_snapshot_archive(
+                owner="acme",
+                name="trace",
+                commit_sha="a" * 40,
+                max_bytes=5,
+            )
+    finally:
+        await http_client.aclose()

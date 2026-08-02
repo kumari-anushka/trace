@@ -112,6 +112,9 @@ class IngestionService:
 
         return ingestion_job
 
+    async def list_running_jobs(self) -> Sequence[IngestionJob]:
+        return await self.store.list_running()
+
     async def mark_queued(
         self,
         ingestion_job: IngestionJob,
@@ -267,6 +270,7 @@ class IngestionStageService:
         ingestion_stage: IngestionStage,
         *,
         progress: int,
+        output_summary: dict[str, object] | None = None,
     ) -> IngestionStage:
         if ingestion_stage.status is not IngestionStageStatus.RUNNING:
             raise InvalidIngestionStageTransitionError(
@@ -279,6 +283,8 @@ class IngestionStageService:
             )
 
         ingestion_stage.progress = progress
+        if output_summary is not None:
+            ingestion_stage.output_summary = output_summary
 
         return await self.store.flush(ingestion_stage)
 

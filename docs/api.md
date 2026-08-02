@@ -244,9 +244,11 @@ pending → queued → running → completed
 ```
 
 Stage statuses are `pending`, `running`, `completed`, `failed`, or `skipped`.
-Completed Week 2 stages include count-based `output_summary` values. The
-pipeline stages are `fetch_repository_metadata`, `fetch_source_tree`, and
-`fetch_github_artifacts`.
+Completed Week 2 stages include count-based `output_summary` values. Pull-request
+and commit stages also expose live partial counts while running. The pipeline
+stages are `fetch_repository_metadata`, `fetch_source_tree`,
+`fetch_source_contents`, `fetch_issues_and_labels`, `fetch_pull_requests`,
+`fetch_commits`, and `fetch_releases_and_contributors`.
 
 ## Repository versions
 

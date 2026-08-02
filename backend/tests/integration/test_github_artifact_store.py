@@ -1,13 +1,16 @@
 import json
 from datetime import UTC, datetime
+from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
+from zipfile import ZipFile
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import async_session_factory
+from src.github.classification import extract_text_files_from_zip
 from src.github.models import (
     GitHubCommit as GitHubCommitModel,
 )
@@ -17,6 +20,7 @@ from src.github.models import (
 from src.github.models import (
     GitHubPerson,
     SourceFile,
+    SourceFileContent,
 )
 from src.github.models import (
     GitHubPullRequest as GitHubPullRequestModel,
@@ -150,6 +154,16 @@ async def test_github_artifacts_are_idempotent_and_keep_git_identity_separate() 
     )
     contributor = GitHubContributor.model_validate({**actor, "contributions": 10})
     tree = GitHubTree.model_validate(json.loads((FIXTURES / "source_tree.json").read_text()))
+    archive_buffer = BytesIO()
+    with ZipFile(archive_buffer, "w") as archive:
+        archive.writestr("acme-trace/src/main.py", "print('trace')\n")
+        archive.writestr("acme-trace/tests/test_main.py", "def test_main(): pass\n")
+        archive.writestr("acme-trace/README.md", "# Trace\n")
+    extraction = extract_text_files_from_zip(
+        archive_buffer.getvalue(),
+        allowed_paths={"src/main.py", "tests/test_main.py", "README.md"},
+        max_file_bytes=1_000,
+    )
 
     async with async_session_factory() as session:
         repository_store = RepositoryStore(session=session)
@@ -174,6 +188,10 @@ async def test_github_artifacts_are_idempotent_and_keep_git_identity_separate() 
                     repository_version_id=version.id,
                     tree=tree,
                 )
+                await store.replace_source_contents(
+                    repository_version_id=version.id,
+                    extraction=extraction,
+                )
                 await store.persist_artifacts(
                     repository_id=repository.id,
                     repository_version_id=version.id,
@@ -197,6 +215,15 @@ async def test_github_artifacts_are_idempotent_and_keep_git_identity_separate() 
                 )
                 == 4
             )
+            content_count = (
+                await session.execute(
+                    select(func.count())
+                    .select_from(SourceFileContent)
+                    .join(SourceFile, SourceFileContent.source_file_id == SourceFile.id)
+                    .where(SourceFile.repository_version_id == version.id)
+                )
+            ).scalar_one()
+            assert content_count == 3
             for model in (
                 GitHubPerson,
                 GitHubIssueModel,

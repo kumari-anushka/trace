@@ -110,7 +110,8 @@ function getStageIcon(status: IngestionStageStatus): ReactNode {
 
 function StageRow({ stage }: { stage: IngestionStage }) {
   const summaryEntries = Object.entries(stage.output_summary ?? {}).filter(
-    (entry): entry is [string, number] => typeof entry[1] === "number",
+    (entry): entry is [string, number] =>
+      !entry[0].startsWith("_") && typeof entry[1] === "number",
   );
 
   return (

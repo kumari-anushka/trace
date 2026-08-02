@@ -40,6 +40,7 @@ class IngestionWorker:
 
     async def run_forever(self) -> None:
         await self.consumer.ensure_group()
+        await self.recover_running_jobs()
 
         while True:
             try:
@@ -49,6 +50,17 @@ class IngestionWorker:
             except Exception:
                 logger.exception("Ingestion worker iteration failed")
                 await asyncio.sleep(self.retry_delay_seconds)
+
+    async def recover_running_jobs(self) -> int:
+        running_jobs = await self.ingestion_service.list_running_jobs()
+        await self.session.commit()
+        recovered = await self.consumer.recover([job.id for job in running_jobs])
+        if recovered:
+            logger.warning(
+                "Recovered orphaned ingestion jobs",
+                extra={"recovered_jobs": recovered},
+            )
+        return recovered
 
     async def run_once(self) -> bool:
         try:

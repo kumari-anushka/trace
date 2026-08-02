@@ -22,6 +22,7 @@ __all__ = [
     "GitHubRelease",
     "IngestionArtifactSnapshot",
     "SourceFile",
+    "SourceFileContent",
 ]
 from src.github.models import (
     GitHubCommit,
@@ -39,4 +40,5 @@ from src.github.models import (
     GitHubRelease,
     IngestionArtifactSnapshot,
     SourceFile,
+    SourceFileContent,
 )

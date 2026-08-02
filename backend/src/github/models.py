@@ -90,6 +90,27 @@ class SourceFile(Base):
     )
 
 
+class SourceFileContent(Base):
+    __tablename__ = "source_file_contents"
+
+    source_file_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("source_files.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    encoding: Mapped[str] = mapped_column(String(30), nullable=False)
+    byte_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    line_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class GitHubLabel(Base):
     __tablename__ = "github_labels"
     __table_args__ = (

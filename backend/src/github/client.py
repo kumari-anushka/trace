@@ -134,6 +134,24 @@ class GitHubClient:
 
         return GitHubTree(sha=root.sha, truncated=False, tree=entries)
 
+    async def download_snapshot_archive(
+        self,
+        *,
+        owner: str,
+        name: str,
+        commit_sha: str,
+        max_bytes: int,
+    ) -> bytes:
+        response = await self._request_response(
+            path=f"/repos/{owner}/{name}/zipball/{commit_sha}",
+            not_found_message="GitHub repository snapshot archive not found",
+        )
+        if len(response.content) > max_bytes:
+            raise GitHubAPIError(
+                f"GitHub repository archive exceeds the {max_bytes}-byte ingestion limit"
+            )
+        return response.content
+
     async def list_labels(self, *, owner: str, name: str, limit: int) -> list[GitHubLabel]:
         return await self._get_models(
             path=f"/repos/{owner}/{name}/labels",
@@ -281,6 +299,23 @@ class GitHubClient:
         not_found_message: str,
         params: dict[str, str] | None = None,
     ) -> tuple[Any, httpx.Response]:
+        response = await self._request_response(
+            path=path,
+            params=params,
+            not_found_message=not_found_message,
+        )
+        try:
+            return response.json(), response
+        except ValueError as error:
+            raise GitHubAPIError("GitHub returned an invalid JSON response") from error
+
+    async def _request_response(
+        self,
+        *,
+        path: str,
+        not_found_message: str,
+        params: dict[str, str] | None = None,
+    ) -> httpx.Response:
         url = path if path.startswith(self.api_url) else f"{self.api_url}{path}"
 
         for attempt in range(self.max_retries + 1):
@@ -335,10 +370,7 @@ class GitHubClient:
                     f"GitHub API request failed with status {response.status_code}"
                 ) from error
 
-            try:
-                return response.json(), response
-            except ValueError as error:
-                raise GitHubAPIError("GitHub returned an invalid JSON response") from error
+            return response
 
         raise AssertionError("unreachable")
 

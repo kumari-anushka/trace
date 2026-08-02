@@ -4,11 +4,15 @@ from collections.abc import Mapping, Sequence
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.github.classification import classify_source_file, normalize_repository_path
+from src.github.classification import (
+    ArchiveExtraction,
+    classify_source_file,
+    normalize_repository_path,
+)
 from src.github.models import (
     GitHubCommit as GitHubCommitModel,
 )
@@ -22,6 +26,7 @@ from src.github.models import (
     GitHubPullRequestReview,
     IngestionArtifactSnapshot,
     SourceFile,
+    SourceFileContent,
 )
 from src.github.models import (
     GitHubContributor as GitHubContributorModel,
@@ -109,6 +114,72 @@ class GitHubArtifactStore:
         await self.session.execute(stale_files)
         return {"files": len(entries), **counts}
 
+    async def list_content_candidate_paths(
+        self,
+        *,
+        repository_version_id: UUID,
+    ) -> set[str]:
+        result = await self.session.execute(
+            select(SourceFile.path).where(
+                SourceFile.repository_version_id == repository_version_id,
+                SourceFile.file_kind.in_(("source", "test", "documentation")),
+            )
+        )
+        return set(result.scalars().all())
+
+    async def replace_source_contents(
+        self,
+        *,
+        repository_version_id: UUID,
+        extraction: ArchiveExtraction,
+    ) -> dict[str, int]:
+        file_rows = await self.session.execute(
+            select(SourceFile.id, SourceFile.path).where(
+                SourceFile.repository_version_id == repository_version_id
+            )
+        )
+        file_ids = {path: file_id for file_id, path in file_rows.all()}
+        version_file_ids = select(SourceFile.id).where(
+            SourceFile.repository_version_id == repository_version_id
+        )
+        await self.session.execute(
+            delete(SourceFileContent).where(SourceFileContent.source_file_id.in_(version_file_ids))
+        )
+
+        values = [
+            {
+                "source_file_id": file_ids[file.path],
+                "content": file.content,
+                "content_hash": file.content_hash,
+                "encoding": file.encoding,
+                "byte_size": file.byte_size,
+                "line_count": file.line_count,
+            }
+            for file in extraction.files
+            if file.path in file_ids
+        ]
+        for offset in range(0, len(values), 200):
+            statement = insert(SourceFileContent).values(values[offset : offset + 200])
+            await self.session.execute(
+                statement.on_conflict_do_update(
+                    index_elements=[SourceFileContent.source_file_id],
+                    set_={
+                        "content": statement.excluded.content,
+                        "content_hash": statement.excluded.content_hash,
+                        "encoding": statement.excluded.encoding,
+                        "byte_size": statement.excluded.byte_size,
+                        "line_count": statement.excluded.line_count,
+                    },
+                )
+            )
+
+        return {
+            "contents": len(values),
+            "skipped_large": extraction.skipped_large,
+            "skipped_non_text": extraction.skipped_non_text,
+            "missing": extraction.missing,
+        }
+
     async def persist_artifacts(
         self,
         *,
@@ -124,14 +195,60 @@ class GitHubArtifactStore:
         contributors: Sequence[GitHubContributor],
         bounds: dict[str, object],
     ) -> dict[str, object]:
+        issue_summary = await self.persist_labels_and_issues(
+            repository_id=repository_id,
+            labels=labels,
+            issues=issues,
+        )
+        pull_request_summary = await self.persist_pull_requests(
+            repository_id=repository_id,
+            pull_requests=pull_requests,
+            pull_request_files=pull_request_files,
+            pull_request_reviews=pull_request_reviews,
+        )
+        commit_summary = await self.persist_commits(
+            repository_id=repository_id,
+            commits=commits,
+        )
+        release_summary = await self.persist_releases_and_contributors(
+            repository_id=repository_id,
+            releases=releases,
+            contributors=contributors,
+        )
+        await self.persist_artifact_snapshot(
+            repository_version_id=repository_version_id,
+            bounds=bounds,
+        )
+        return {
+            **issue_summary,
+            **pull_request_summary,
+            **commit_summary,
+            **release_summary,
+        }
+
+    async def persist_labels_and_issues(
+        self,
+        *,
+        repository_id: UUID,
+        labels: Sequence[GitHubLabel],
+        issues: Sequence[GitHubIssue],
+    ) -> dict[str, int]:
         for label in labels:
             await self._upsert_label(repository_id, label)
-
-        review_count = 0
-        pull_request_file_count = 0
         for issue in issues:
             await self._upsert_issue(repository_id, issue)
+        return {"labels": len(labels), "issues": len(issues)}
 
+    async def persist_pull_requests(
+        self,
+        *,
+        repository_id: UUID,
+        pull_requests: Sequence[GitHubPullRequest],
+        pull_request_files: Mapping[int, Sequence[GitHubChangedFile]],
+        pull_request_reviews: Mapping[int, Sequence[GitHubReview]],
+    ) -> dict[str, int]:
+        review_count = 0
+        pull_request_file_count = 0
         for pull_request in pull_requests:
             pull_request_id = await self._upsert_pull_request(repository_id, pull_request)
             files = pull_request_files.get(pull_request.number, ())
@@ -140,13 +257,32 @@ class GitHubArtifactStore:
             await self._replace_reviews(repository_id, pull_request_id, reviews)
             pull_request_file_count += len(files)
             review_count += len(reviews)
+        return {
+            "pull_requests": len(pull_requests),
+            "pull_request_files": pull_request_file_count,
+            "reviews": review_count,
+        }
 
+    async def persist_commits(
+        self,
+        *,
+        repository_id: UUID,
+        commits: Sequence[GitHubCommit],
+    ) -> dict[str, int]:
         commit_file_count = 0
         for commit in commits:
             commit_id = await self._upsert_commit(repository_id, commit)
             await self._replace_commit_relations(commit_id, commit)
             commit_file_count += len(commit.files)
+        return {"commits": len(commits), "commit_files": commit_file_count}
 
+    async def persist_releases_and_contributors(
+        self,
+        *,
+        repository_id: UUID,
+        releases: Sequence[GitHubRelease],
+        contributors: Sequence[GitHubContributor],
+    ) -> dict[str, int]:
         for release in releases:
             await self._upsert_release(repository_id, release)
 
@@ -168,7 +304,14 @@ class GitHubArtifactStore:
                     set_={"contributions": statement.excluded.contributions},
                 )
             )
+        return {"releases": len(releases), "contributors": len(contributors)}
 
+    async def persist_artifact_snapshot(
+        self,
+        *,
+        repository_version_id: UUID,
+        bounds: dict[str, object],
+    ) -> None:
         snapshot_statement = insert(IngestionArtifactSnapshot).values(
             repository_version_id=repository_version_id,
             bounds=bounds,
@@ -179,18 +322,6 @@ class GitHubArtifactStore:
                 set_={"bounds": snapshot_statement.excluded.bounds},
             )
         )
-
-        return {
-            "labels": len(labels),
-            "issues": len(issues),
-            "pull_requests": len(pull_requests),
-            "pull_request_files": pull_request_file_count,
-            "reviews": review_count,
-            "commits": len(commits),
-            "commit_files": commit_file_count,
-            "releases": len(releases),
-            "contributors": len(contributors),
-        }
 
     async def _upsert_person(self, repository_id: UUID, person: GitHubOwner | None) -> UUID | None:
         if person is None or person.github_id <= 0:

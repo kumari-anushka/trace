@@ -74,6 +74,8 @@ async def run_worker() -> None:
                     commits=settings.github_commit_limit,
                     releases=settings.github_release_limit,
                     contributors=settings.github_contributor_limit,
+                    archive_max_bytes=settings.github_archive_max_bytes,
+                    source_file_max_bytes=settings.github_source_file_max_bytes,
                 ),
             )
             worker = IngestionWorker(

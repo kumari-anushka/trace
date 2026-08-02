@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     github_release_limit: int = 100
     github_contributor_limit: int = 100
     github_label_limit: int = 200
+    github_archive_max_bytes: int = 250_000_000
+    github_source_file_max_bytes: int = 1_000_000
 
     cors_origins: str = "http://localhost:5173"
 

@@ -24,10 +24,17 @@ Historical API calls are bounded and the commit listing is anchored with
 2. `fetch_source_tree`
    - recursive source inventory
    - file classification
-3. `fetch_github_artifacts`
-   - labels, issues, pull requests, changed files, reviews
-   - commits, parents, changed files
-   - releases and contributors
+3. `fetch_source_contents`
+   - fixed-SHA repository archive
+   - normalized UTF-8 text
+   - SHA-256 content hashes
+4. `fetch_issues_and_labels`
+5. `fetch_pull_requests`
+   - per-PR changed files and reviews
+   - durable per-PR checkpoints
+6. `fetch_commits`
+   - parents, changed files, and durable per-commit checkpoints
+7. `fetch_releases_and_contributors`
 
 Each completed stage persists an `output_summary` containing its snapshot
 identity and artifact counts. The repository ingestion API and progress UI
@@ -71,6 +78,12 @@ Every blob is assigned exactly one kind:
 Repository paths are normalized as safe POSIX paths. Absolute paths and parent
 traversal are rejected before persistence.
 
+Text contents are stored separately in `source_file_contents`. Binary,
+generated, and ignored inventory entries are excluded. Oversized,
+NUL-containing, non-UTF-8, and missing candidate files are skipped with counts
+in the stage summary. Line endings are normalized to LF before the content hash
+is calculated.
+
 ## Pagination, Limits, and Retries
 
 The provider adapter follows GitHub `Link` pagination and rejects pagination
@@ -92,6 +105,14 @@ Transient network and provider failures use bounded exponential retries.
 delay. An exhausted retryable failure is left pending in the Redis consumer
 group and reclaimed by a worker; deterministic failures are persisted and
 acknowledged.
+
+Pull-request and commit stages persist a checkpoint after each artifact. A
+retry skips completed provider IDs and SHAs instead of starting the stage over.
+Stage and overall job percentages are committed with every checkpoint.
+
+The worker also reconciles PostgreSQL `running` jobs with the Redis consumer
+group at startup. A job whose mapped stream entry is no longer pending is
+re-enqueued; an existing pending entry is left unchanged.
 
 ## Verification
 
