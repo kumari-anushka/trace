@@ -231,13 +231,12 @@ class RedisIngestionConsumer:
             )
             if mapped_entry is not None:
                 entry_id = self._decode(mapped_entry)
-                pending: Any = await self.redis_client.execute_command(  # type: ignore[no-untyped-call]
-                    "XPENDING",
-                    self.stream_name,
-                    self.group_name,
-                    entry_id,
-                    entry_id,
-                    1,
+                pending = await self.redis_client.xpending_range(
+                    name=self.stream_name,
+                    groupname=self.group_name,
+                    min=entry_id,
+                    max=entry_id,
+                    count=1,
                 )
                 if pending:
                     continue

@@ -16,6 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.core.ontology import ONTOLOGY_VERSION
 from src.db.base import Base
 
 if TYPE_CHECKING:
@@ -73,6 +74,13 @@ class RepositoryVersion(Base):
     )
 
     source_tree_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    ontology_version: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=ONTOLOGY_VERSION,
+        server_default=ONTOLOGY_VERSION,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

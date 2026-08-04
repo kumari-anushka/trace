@@ -5,6 +5,7 @@ import { HomePage } from "../pages/HomePage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { RepositoryIngestionPage } from "../pages/RepositoryIngestionPage";
 import { RepositoryPage } from "../pages/RepositoryPage";
+import { LazyRepositoryGraphPage } from "./LazyRepositoryGraphPage";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,10 @@ export const router = createBrowserRouter([
       {
         path: "/repositories/:repositoryId/ingestion",
         element: <RepositoryIngestionPage />,
+      },
+      {
+        path: "/repositories/:repositoryId/graph",
+        element: <LazyRepositoryGraphPage />,
       },
       {
         path: "*",

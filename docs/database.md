@@ -203,17 +203,22 @@ Fields:
 
 ## pgvector
 
-`documents` stores chunks.
+`documents` stores versioned, evidence-preserving chunks with canonical source
+identity, content hashes, character offsets, line ranges, provenance, and
+source metadata.
 
-`embedding_spaces` stores provider, model, dimensions, metric.
+`embedding_spaces` stores provider, model, revision, dimensions, metric,
+provenance, and active state. The MVP allows one active 384-dimensional cosine
+space.
 
-`embeddings` stores vector.
+`embeddings` stores one pgvector value per document and embedding space. A copy
+of the document content hash prevents stale vectors from entering retrieval.
 
 MVP should use one active embedding space.
 
 Vector index:
 
-- HNSW
+- HNSW over `vector(384)` with cosine operators
 - cosine distance
 - repository/snapshot filters
 

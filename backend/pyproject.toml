@@ -9,11 +9,16 @@ dependencies = [
     "alembic>=1.18.5",
     "fastapi[standard]>=0.139.0",
     "httpx>=0.28.1",
+    "networkx>=3.5",
+    "pgvector>=0.4.2",
     "psycopg[binary]>=3.3.4",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
     "redis>=8.0.1",
     "sqlalchemy[asyncio]>=2.0.51",
+    "tree-sitter>=0.25.0",
+    "tree-sitter-javascript>=0.25.0",
+    "tree-sitter-typescript>=0.23.0",
     "uvicorn[standard]>=0.51.0",
 ]
 
@@ -21,9 +26,11 @@ dependencies = [
 dev = [
     "httpx2>=2.5.0",
     "mypy>=2.2.0",
+    "pre-commit>=4.6.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.15.21",
+    "types-networkx>=3.5",
 ]
 
 [tool.uv]
