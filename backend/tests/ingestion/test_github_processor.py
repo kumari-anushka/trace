@@ -35,6 +35,7 @@ from src.ingestion.processor import (
     PULL_REQUESTS_STAGE_NAME,
     PYTHON_GRAPH_STAGE_NAME,
     SOURCE_CONTENTS_STAGE_NAME,
+    SOURCE_SUMMARIES_STAGE_NAME,
     SOURCE_TREE_STAGE_NAME,
     GitHubIngestionLimits,
     GitHubIngestionProcessor,
@@ -46,6 +47,7 @@ from src.repository_versions.models import RepositoryVersion
 from src.repository_versions.service import RepositoryVersionService
 from src.semantic.artifacts import ArtifactDocumentBuilder, ArtifactDocumentSummary
 from src.semantic.documentation import DocumentationChunkBuilder, DocumentationChunkSummary
+from src.semantic.source_summaries import SourceSummaryBuilder, SourceSummaryBuildSummary
 
 SNAPSHOT_SHA = "a" * 40
 TREE_SHA = "f" * 40
@@ -59,6 +61,7 @@ def empty_snapshot_archive() -> bytes:
 
 
 def graph_builder_mocks() -> tuple[
+    AsyncMock,
     AsyncMock,
     AsyncMock,
     AsyncMock,
@@ -148,6 +151,18 @@ def graph_builder_mocks() -> tuple[
         empty_artifacts=0,
         stale_documents=0,
     )
+    source_summary_builder = AsyncMock(spec=SourceSummaryBuilder)
+    source_summary_builder.build.return_value = SourceSummaryBuildSummary(
+        files=0,
+        chunks=0,
+        characters=0,
+        declarations=0,
+        imports=0,
+        missing_graph_nodes=0,
+        truncated_declarations=0,
+        truncated_imports=0,
+        stale_documents=0,
+    )
     return (
         filesystem_builder,
         python_builder,
@@ -156,6 +171,7 @@ def graph_builder_mocks() -> tuple[
         analysis_builder,
         documentation_builder,
         artifact_document_builder,
+        source_summary_builder,
     )
 
 
@@ -200,6 +216,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
             GRAPH_ANALYSIS_STAGE_NAME,
             DOCUMENTATION_CHUNKS_STAGE_NAME,
             ARTIFACT_DOCUMENTS_STAGE_NAME,
+            SOURCE_SUMMARIES_STAGE_NAME,
         )
     ):
         stage = IngestionStage(
@@ -229,6 +246,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         analysis_builder,
         documentation_builder,
         artifact_document_builder,
+        source_summary_builder,
     ) = graph_builder_mocks()
 
     stage_service.list_stages.return_value = []
@@ -307,6 +325,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         graph_analysis_builder=analysis_builder,
         documentation_chunk_builder=documentation_builder,
         artifact_document_builder=artifact_document_builder,
+        source_summary_builder=source_summary_builder,
         limits=GitHubIngestionLimits(),
     )
 
@@ -338,6 +357,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         IngestionStageStatus.COMPLETED,
         IngestionStageStatus.COMPLETED,
         IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
     ]
     for builder in (
         filesystem_builder,
@@ -347,6 +367,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         analysis_builder,
         documentation_builder,
         artifact_document_builder,
+        source_summary_builder,
     ):
         builder.build.assert_awaited_once_with(
             repository_id=repository.id,
@@ -393,6 +414,7 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         GRAPH_ANALYSIS_STAGE_NAME,
         DOCUMENTATION_CHUNKS_STAGE_NAME,
         ARTIFACT_DOCUMENTS_STAGE_NAME,
+        SOURCE_SUMMARIES_STAGE_NAME,
     )
     stages = []
     for position, name in enumerate(stage_names):
@@ -452,6 +474,7 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         analysis_builder,
         documentation_builder,
         artifact_document_builder,
+        source_summary_builder,
     ) = graph_builder_mocks()
     stage_service.list_stages.return_value = stages
     version_service.get_repository_version.return_value = version
@@ -501,6 +524,7 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         graph_analysis_builder=analysis_builder,
         documentation_chunk_builder=documentation_builder,
         artifact_document_builder=artifact_document_builder,
+        source_summary_builder=source_summary_builder,
         limits=GitHubIngestionLimits(),
     )
 
@@ -525,5 +549,6 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         analysis_builder,
         documentation_builder,
         artifact_document_builder,
+        source_summary_builder,
     ):
         builder.build.assert_not_awaited()

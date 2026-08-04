@@ -20,6 +20,7 @@ from src.repositories.service import RepositoryService
 from src.repository_versions.service import RepositoryVersionService
 from src.semantic.artifacts import ArtifactDocumentBuilder
 from src.semantic.documentation import DocumentationChunkBuilder
+from src.semantic.source_summaries import SourceSummaryBuilder
 
 FOUNDATION_STAGE_NAME = "prepare_repository_snapshot"
 METADATA_STAGE_NAME = "fetch_repository_metadata"
@@ -36,6 +37,7 @@ HISTORICAL_GRAPH_STAGE_NAME = "build_historical_graph"
 GRAPH_ANALYSIS_STAGE_NAME = "analyze_repository_graph"
 DOCUMENTATION_CHUNKS_STAGE_NAME = "chunk_repository_documentation"
 ARTIFACT_DOCUMENTS_STAGE_NAME = "chunk_repository_artifacts"
+SOURCE_SUMMARIES_STAGE_NAME = "summarize_source_files"
 
 STAGE_DEFINITIONS = (
     (METADATA_STAGE_NAME, 0, 15),
@@ -52,6 +54,7 @@ STAGE_DEFINITIONS = (
     (GRAPH_ANALYSIS_STAGE_NAME, 11, 99),
     (DOCUMENTATION_CHUNKS_STAGE_NAME, 12, 99),
     (ARTIFACT_DOCUMENTS_STAGE_NAME, 13, 99),
+    (SOURCE_SUMMARIES_STAGE_NAME, 14, 99),
 )
 
 
@@ -176,6 +179,7 @@ class GitHubIngestionProcessor:
         graph_analysis_builder: GraphAnalysisBuilder,
         documentation_chunk_builder: DocumentationChunkBuilder,
         artifact_document_builder: ArtifactDocumentBuilder,
+        source_summary_builder: SourceSummaryBuilder,
         limits: GitHubIngestionLimits,
     ) -> None:
         self.session = session
@@ -192,6 +196,7 @@ class GitHubIngestionProcessor:
         self.graph_analysis_builder = graph_analysis_builder
         self.documentation_chunk_builder = documentation_chunk_builder
         self.artifact_document_builder = artifact_document_builder
+        self.source_summary_builder = source_summary_builder
         self.limits = limits
 
     async def process(self, ingestion_job: IngestionJob) -> None:
@@ -574,6 +579,20 @@ class GitHubIngestionProcessor:
             ingestion_stage=stages[ARTIFACT_DOCUMENTS_STAGE_NAME],
             completed_progress=99,
             action=artifact_documents_action,
+        )
+
+        async def source_summaries_action() -> dict[str, object]:
+            summary = await self.source_summary_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[SOURCE_SUMMARIES_STAGE_NAME],
+            completed_progress=99,
+            action=source_summaries_action,
         )
 
     async def _ensure_stages(self, ingestion_job: IngestionJob) -> dict[str, IngestionStage]:

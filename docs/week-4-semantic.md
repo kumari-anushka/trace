@@ -81,6 +81,29 @@ document family independently. Re-ingestion updates stable chunk identities
 and removes documents and cascading embeddings for artifacts that are no
 longer present in the bounded provider snapshot.
 
+## Deterministic Source Summaries
+
+Source and test files receive compact summaries generated entirely from
+persisted parser and graph facts. Each summary names the file kind, language,
+blob and content hashes, declared symbols, internal file imports, external
+dependencies, degree centrality, and import-community membership. No model is
+used, so rebuilding the same snapshot produces the same text and identity.
+
+Relation lists are sorted and capped at 50 declarations and 50 imports per
+file, with explicit omission counts. Labels are normalized and bounded, and a
+snapshot is capped at 10,000 eligible files. Generated summaries pass through
+the same 2,400-character chunking boundary as documentation so unusually dense
+files remain safe for embedding.
+
+Every `source_summary` chunk links to its source file graph node and fixed-SHA
+GitHub URL. Metadata records the source path, file classification, language,
+size, blob SHA, source hash, summary hash, structural metrics, exact offsets,
+and line ranges. Provenance records the deterministic algorithm and chunker
+versions plus the graph edge IDs used to construct the text.
+
+The resumable `summarize_source_files` stage runs after artifact chunking and
+prunes stale source-summary documents and their cascading embeddings.
+
 ## Infrastructure
 
 Local Docker Compose and GitHub CI use the Trixie-based pgvector PostgreSQL 17
@@ -91,8 +114,8 @@ semantic tables.
 
 ## Next Slice
 
-Create deterministic source-file summaries from parser and graph facts, then
-add a provider-neutral embedding adapter for pending documents.
+Add a provider-neutral embedding adapter that consumes pending documents,
+persists content-hash-bound vectors, and supports reproducible local testing.
 
 ## Verification
 
@@ -101,6 +124,9 @@ behavior, pending work, stale-vector filtering, cosine result ordering,
 documentation source links, exact offsets, and stale-chunk pruning.
 Artifact integration tests also cover title fallbacks, historical graph links,
 provider metadata, idempotency, body changes, and removed artifacts.
+Source-summary integration tests cover real Python parsing, internal and
+external import resolution, graph metrics, fixed-snapshot links, source graph
+nodes, source-family filtering, and idempotent writes.
 
 ```bash
 cd backend

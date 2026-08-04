@@ -32,6 +32,7 @@ from src.semantic.documentation import (
     PostgresDocumentationSourceReader,
 )
 from src.semantic.repository import PostgresSemanticRepository
+from src.semantic.source_summaries import PostgresSourceSummaryReader, SourceSummaryBuilder
 
 
 async def run_worker() -> None:
@@ -103,6 +104,10 @@ async def run_worker() -> None:
                 artifact_document_builder=ArtifactDocumentBuilder(
                     semantic_repository=semantic_repository,
                     source_reader=PostgresArtifactSourceReader(session=session),
+                ),
+                source_summary_builder=SourceSummaryBuilder(
+                    semantic_repository=semantic_repository,
+                    source_reader=PostgresSourceSummaryReader(session=session),
                 ),
                 limits=GitHubIngestionLimits(
                     labels=settings.github_label_limit,
