@@ -277,6 +277,31 @@ GET /api/ingestion-jobs/{ingestion_job_id}
 This lower-level endpoint returns the job itself. Use the repository ingestion
 endpoint when the frontend also needs the ordered stage list.
 
+## Repository graph
+
+### Get a bounded snapshot graph
+
+```http
+GET /api/repositories/{repository_id}/versions/{repository_version_id}/graph
+```
+
+Optional repeatable filters are `entity_type`, `relationship_type`,
+`knowledge_kind`, and `metric_name`. `include_metrics=false` omits metric
+records. Default limits are 200 nodes, 1,000 edges, and 2,000 metrics; hard
+maximums are 500, 2,000, and 5,000 respectively.
+
+### Get bounded node neighbors
+
+```http
+GET /api/repositories/{repository_id}/versions/{repository_version_id}/graph/nodes/{node_id}/neighbors
+```
+
+This endpoint accepts the same filters and limits plus `depth`, constrained to
+1–3. Traversal treats ontology relationships as incident connections in either
+direction and always includes the requested root node. Responses expose
+`nodes_truncated`, `edges_truncated`, and `metrics_truncated`; clients must not
+assume a truncated response is the complete graph.
+
 ## Idempotency
 
 Trace permits at most one active ingestion job per immutable repository
@@ -289,5 +314,5 @@ unique index, protecting against simultaneous requests.
 ## Planned endpoints
 
 Atlas overview, architecture, subsystems, timeline, decisions, contributors,
-graph, search, evidence, retry, and cited-question endpoints are planned for
+search, evidence, retry, and cited-question endpoints are planned for
 later roadmap weeks. They are intentionally not documented as available yet.

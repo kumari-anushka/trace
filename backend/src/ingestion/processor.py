@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,11 +8,18 @@ from src.core.exceptions import RetryableGitHubAPIError
 from src.github.classification import extract_text_files_from_zip
 from src.github.client import GitHubClient
 from src.github.store import GitHubArtifactStore
+from src.graph.analysis import GraphAnalysisBuilder
+from src.graph.filesystem import FilesystemGraphBuilder
+from src.graph.history import HistoricalGraphBuilder
+from src.graph.javascript import JavaScriptGraphBuilder
+from src.graph.python import PythonGraphBuilder
 from src.ingestion.models import IngestionJob, IngestionStage, IngestionStageStatus
 from src.ingestion.runner import MAX_ERROR_MESSAGE_LENGTH
 from src.ingestion.service import IngestionService, IngestionStageService
 from src.repositories.service import RepositoryService
 from src.repository_versions.service import RepositoryVersionService
+from src.semantic.artifacts import ArtifactDocumentBuilder
+from src.semantic.documentation import DocumentationChunkBuilder
 
 FOUNDATION_STAGE_NAME = "prepare_repository_snapshot"
 METADATA_STAGE_NAME = "fetch_repository_metadata"
@@ -22,6 +29,13 @@ ISSUES_STAGE_NAME = "fetch_issues_and_labels"
 PULL_REQUESTS_STAGE_NAME = "fetch_pull_requests"
 COMMITS_STAGE_NAME = "fetch_commits"
 ARTIFACTS_STAGE_NAME = "fetch_releases_and_contributors"
+FILESYSTEM_GRAPH_STAGE_NAME = "build_filesystem_graph"
+PYTHON_GRAPH_STAGE_NAME = "build_python_graph"
+JAVASCRIPT_GRAPH_STAGE_NAME = "build_javascript_graph"
+HISTORICAL_GRAPH_STAGE_NAME = "build_historical_graph"
+GRAPH_ANALYSIS_STAGE_NAME = "analyze_repository_graph"
+DOCUMENTATION_CHUNKS_STAGE_NAME = "chunk_repository_documentation"
+ARTIFACT_DOCUMENTS_STAGE_NAME = "chunk_repository_artifacts"
 
 STAGE_DEFINITIONS = (
     (METADATA_STAGE_NAME, 0, 15),
@@ -30,7 +44,14 @@ STAGE_DEFINITIONS = (
     (ISSUES_STAGE_NAME, 3, 60),
     (PULL_REQUESTS_STAGE_NAME, 4, 78),
     (COMMITS_STAGE_NAME, 5, 92),
-    (ARTIFACTS_STAGE_NAME, 6, 99),
+    (ARTIFACTS_STAGE_NAME, 6, 93),
+    (FILESYSTEM_GRAPH_STAGE_NAME, 7, 95),
+    (PYTHON_GRAPH_STAGE_NAME, 8, 97),
+    (JAVASCRIPT_GRAPH_STAGE_NAME, 9, 98),
+    (HISTORICAL_GRAPH_STAGE_NAME, 10, 99),
+    (GRAPH_ANALYSIS_STAGE_NAME, 11, 99),
+    (DOCUMENTATION_CHUNKS_STAGE_NAME, 12, 99),
+    (ARTIFACT_DOCUMENTS_STAGE_NAME, 13, 99),
 )
 
 
@@ -148,6 +169,13 @@ class GitHubIngestionProcessor:
         repository_service: RepositoryService,
         github_client: GitHubClient,
         artifact_store: GitHubArtifactStore,
+        filesystem_graph_builder: FilesystemGraphBuilder,
+        python_graph_builder: PythonGraphBuilder,
+        javascript_graph_builder: JavaScriptGraphBuilder,
+        historical_graph_builder: HistoricalGraphBuilder,
+        graph_analysis_builder: GraphAnalysisBuilder,
+        documentation_chunk_builder: DocumentationChunkBuilder,
+        artifact_document_builder: ArtifactDocumentBuilder,
         limits: GitHubIngestionLimits,
     ) -> None:
         self.session = session
@@ -157,6 +185,13 @@ class GitHubIngestionProcessor:
         self.repository_service = repository_service
         self.github_client = github_client
         self.artifact_store = artifact_store
+        self.filesystem_graph_builder = filesystem_graph_builder
+        self.python_graph_builder = python_graph_builder
+        self.javascript_graph_builder = javascript_graph_builder
+        self.historical_graph_builder = historical_graph_builder
+        self.graph_analysis_builder = graph_analysis_builder
+        self.documentation_chunk_builder = documentation_chunk_builder
+        self.artifact_document_builder = artifact_document_builder
         self.limits = limits
 
     async def process(self, ingestion_job: IngestionJob) -> None:
@@ -439,8 +474,106 @@ class GitHubIngestionProcessor:
         await self._run_stage(
             ingestion_job=ingestion_job,
             ingestion_stage=stages[ARTIFACTS_STAGE_NAME],
-            completed_progress=99,
+            completed_progress=93,
             action=final_artifacts_action,
+        )
+
+        async def filesystem_graph_action() -> dict[str, object]:
+            summary = await self.filesystem_graph_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[FILESYSTEM_GRAPH_STAGE_NAME],
+            completed_progress=95,
+            action=filesystem_graph_action,
+        )
+
+        async def python_graph_action() -> dict[str, object]:
+            summary = await self.python_graph_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[PYTHON_GRAPH_STAGE_NAME],
+            completed_progress=97,
+            action=python_graph_action,
+        )
+
+        async def javascript_graph_action() -> dict[str, object]:
+            summary = await self.javascript_graph_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[JAVASCRIPT_GRAPH_STAGE_NAME],
+            completed_progress=98,
+            action=javascript_graph_action,
+        )
+
+        async def historical_graph_action() -> dict[str, object]:
+            summary = await self.historical_graph_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[HISTORICAL_GRAPH_STAGE_NAME],
+            completed_progress=99,
+            action=historical_graph_action,
+        )
+
+        async def graph_analysis_action() -> dict[str, object]:
+            summary = await self.graph_analysis_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[GRAPH_ANALYSIS_STAGE_NAME],
+            completed_progress=99,
+            action=graph_analysis_action,
+        )
+
+        async def documentation_chunks_action() -> dict[str, object]:
+            summary = await self.documentation_chunk_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[DOCUMENTATION_CHUNKS_STAGE_NAME],
+            completed_progress=99,
+            action=documentation_chunks_action,
+        )
+
+        async def artifact_documents_action() -> dict[str, object]:
+            summary = await self.artifact_document_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[ARTIFACT_DOCUMENTS_STAGE_NAME],
+            completed_progress=99,
+            action=artifact_documents_action,
         )
 
     async def _ensure_stages(self, ingestion_job: IngestionJob) -> dict[str, IngestionStage]:

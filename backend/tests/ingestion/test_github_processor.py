@@ -10,6 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.github.client import GitHubClient
 from src.github.schemas import GitHubCommit, GitHubPullRequest, GitHubRepository, GitHubTree
 from src.github.store import GitHubArtifactStore
+from src.graph.analysis import GraphAnalysisBuilder, GraphAnalysisSummary
+from src.graph.filesystem import FilesystemGraphBuilder, FilesystemGraphSummary
+from src.graph.history import HistoricalGraphBuilder, HistoricalGraphSummary
+from src.graph.javascript import JavaScriptGraphBuilder, JavaScriptGraphSummary
+from src.graph.python import PythonGraphBuilder, PythonGraphSummary
 from src.ingestion.models import (
     IngestionJob,
     IngestionJobStatus,
@@ -17,11 +22,18 @@ from src.ingestion.models import (
     IngestionStageStatus,
 )
 from src.ingestion.processor import (
+    ARTIFACT_DOCUMENTS_STAGE_NAME,
     ARTIFACTS_STAGE_NAME,
     COMMITS_STAGE_NAME,
+    DOCUMENTATION_CHUNKS_STAGE_NAME,
+    FILESYSTEM_GRAPH_STAGE_NAME,
+    GRAPH_ANALYSIS_STAGE_NAME,
+    HISTORICAL_GRAPH_STAGE_NAME,
     ISSUES_STAGE_NAME,
+    JAVASCRIPT_GRAPH_STAGE_NAME,
     METADATA_STAGE_NAME,
     PULL_REQUESTS_STAGE_NAME,
+    PYTHON_GRAPH_STAGE_NAME,
     SOURCE_CONTENTS_STAGE_NAME,
     SOURCE_TREE_STAGE_NAME,
     GitHubIngestionLimits,
@@ -32,6 +44,8 @@ from src.repositories.models import Repository
 from src.repositories.service import RepositoryService
 from src.repository_versions.models import RepositoryVersion
 from src.repository_versions.service import RepositoryVersionService
+from src.semantic.artifacts import ArtifactDocumentBuilder, ArtifactDocumentSummary
+from src.semantic.documentation import DocumentationChunkBuilder, DocumentationChunkSummary
 
 SNAPSHOT_SHA = "a" * 40
 TREE_SHA = "f" * 40
@@ -42,6 +56,107 @@ def empty_snapshot_archive() -> bytes:
     with ZipFile(buffer, "w") as archive:
         archive.writestr("acme-trace/", "")
     return buffer.getvalue()
+
+
+def graph_builder_mocks() -> tuple[
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+]:
+    filesystem_builder = AsyncMock(spec=FilesystemGraphBuilder)
+    filesystem_builder.build.return_value = FilesystemGraphSummary(
+        nodes=1,
+        edges=0,
+        evidence=0,
+        directories=0,
+        files=0,
+    )
+    python_builder = AsyncMock(spec=PythonGraphBuilder)
+    python_builder.build.return_value = PythonGraphSummary(
+        files=0,
+        parsed_files=0,
+        failed_files=0,
+        symbols=0,
+        imports=0,
+        internal_imports=0,
+        external_imports=0,
+        unresolved_imports=0,
+        failures=(),
+    )
+    javascript_builder = AsyncMock(spec=JavaScriptGraphBuilder)
+    javascript_builder.build.return_value = JavaScriptGraphSummary(
+        files=0,
+        parsed_files=0,
+        failed_files=0,
+        symbols=0,
+        imports=0,
+        exports=0,
+        components=0,
+        hooks=0,
+        internal_imports=0,
+        external_imports=0,
+        unresolved_imports=0,
+        failures=(),
+    )
+    historical_builder = AsyncMock(spec=HistoricalGraphBuilder)
+    historical_builder.build.return_value = HistoricalGraphSummary(
+        people=0,
+        artifacts=0,
+        files=0,
+        edges=0,
+        evidence=0,
+        authored=0,
+        reviewed=0,
+        modifies=0,
+        references=0,
+        resolves=0,
+        parent_of=0,
+        release_includes=0,
+        unresolved_files=0,
+        unresolved_references=0,
+        unresolved_parents=0,
+    )
+    analysis_builder = AsyncMock(spec=GraphAnalysisBuilder)
+    analysis_builder.build.return_value = GraphAnalysisSummary(
+        nodes=1,
+        edges=0,
+        metrics=8,
+        connected_components=1,
+        communities=0,
+        bridges=0,
+        dependency_cycles=0,
+    )
+    documentation_builder = AsyncMock(spec=DocumentationChunkBuilder)
+    documentation_builder.build.return_value = DocumentationChunkSummary(
+        files=0,
+        chunks=0,
+        characters=0,
+        empty_files=0,
+        stale_documents=0,
+    )
+    artifact_document_builder = AsyncMock(spec=ArtifactDocumentBuilder)
+    artifact_document_builder.build.return_value = ArtifactDocumentSummary(
+        issues=0,
+        pull_requests=0,
+        releases=0,
+        chunks=0,
+        characters=0,
+        empty_artifacts=0,
+        stale_documents=0,
+    )
+    return (
+        filesystem_builder,
+        python_builder,
+        javascript_builder,
+        historical_builder,
+        analysis_builder,
+        documentation_builder,
+        artifact_document_builder,
+    )
 
 
 @pytest.mark.asyncio
@@ -78,6 +193,13 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
             PULL_REQUESTS_STAGE_NAME,
             COMMITS_STAGE_NAME,
             ARTIFACTS_STAGE_NAME,
+            FILESYSTEM_GRAPH_STAGE_NAME,
+            PYTHON_GRAPH_STAGE_NAME,
+            JAVASCRIPT_GRAPH_STAGE_NAME,
+            HISTORICAL_GRAPH_STAGE_NAME,
+            GRAPH_ANALYSIS_STAGE_NAME,
+            DOCUMENTATION_CHUNKS_STAGE_NAME,
+            ARTIFACT_DOCUMENTS_STAGE_NAME,
         )
     ):
         stage = IngestionStage(
@@ -99,6 +221,15 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
     repository_service = AsyncMock(spec=RepositoryService)
     github_client = AsyncMock(spec=GitHubClient)
     artifact_store = AsyncMock(spec=GitHubArtifactStore)
+    (
+        filesystem_builder,
+        python_builder,
+        javascript_builder,
+        historical_builder,
+        analysis_builder,
+        documentation_builder,
+        artifact_document_builder,
+    ) = graph_builder_mocks()
 
     stage_service.list_stages.return_value = []
     stage_service.create_stage.side_effect = stages
@@ -169,6 +300,13 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         repository_service=repository_service,
         github_client=github_client,
         artifact_store=artifact_store,
+        filesystem_graph_builder=filesystem_builder,
+        python_graph_builder=python_builder,
+        javascript_graph_builder=javascript_builder,
+        historical_graph_builder=historical_builder,
+        graph_analysis_builder=analysis_builder,
+        documentation_chunk_builder=documentation_builder,
+        artifact_document_builder=artifact_document_builder,
         limits=GitHubIngestionLimits(),
     )
 
@@ -193,7 +331,27 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         IngestionStageStatus.COMPLETED,
         IngestionStageStatus.COMPLETED,
         IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
+        IngestionStageStatus.COMPLETED,
     ]
+    for builder in (
+        filesystem_builder,
+        python_builder,
+        javascript_builder,
+        historical_builder,
+        analysis_builder,
+        documentation_builder,
+        artifact_document_builder,
+    ):
+        builder.build.assert_awaited_once_with(
+            repository_id=repository.id,
+            repository_version_id=version.id,
+        )
 
 
 @pytest.mark.asyncio
@@ -228,6 +386,13 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         PULL_REQUESTS_STAGE_NAME,
         COMMITS_STAGE_NAME,
         ARTIFACTS_STAGE_NAME,
+        FILESYSTEM_GRAPH_STAGE_NAME,
+        PYTHON_GRAPH_STAGE_NAME,
+        JAVASCRIPT_GRAPH_STAGE_NAME,
+        HISTORICAL_GRAPH_STAGE_NAME,
+        GRAPH_ANALYSIS_STAGE_NAME,
+        DOCUMENTATION_CHUNKS_STAGE_NAME,
+        ARTIFACT_DOCUMENTS_STAGE_NAME,
     )
     stages = []
     for position, name in enumerate(stage_names):
@@ -279,6 +444,15 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
     repository_service = AsyncMock(spec=RepositoryService)
     github_client = AsyncMock(spec=GitHubClient)
     artifact_store = AsyncMock(spec=GitHubArtifactStore)
+    (
+        filesystem_builder,
+        python_builder,
+        javascript_builder,
+        historical_builder,
+        analysis_builder,
+        documentation_builder,
+        artifact_document_builder,
+    ) = graph_builder_mocks()
     stage_service.list_stages.return_value = stages
     version_service.get_repository_version.return_value = version
     repository_service.get_repository.return_value = repository
@@ -320,6 +494,13 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         repository_service=repository_service,
         github_client=github_client,
         artifact_store=artifact_store,
+        filesystem_graph_builder=filesystem_builder,
+        python_graph_builder=python_builder,
+        javascript_graph_builder=javascript_builder,
+        historical_graph_builder=historical_builder,
+        graph_analysis_builder=analysis_builder,
+        documentation_chunk_builder=documentation_builder,
+        artifact_document_builder=artifact_document_builder,
         limits=GitHubIngestionLimits(),
     )
 
@@ -336,3 +517,13 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         "pull_request_files": 2,
         "reviews": 1,
     }
+    for builder in (
+        filesystem_builder,
+        python_builder,
+        javascript_builder,
+        historical_builder,
+        analysis_builder,
+        documentation_builder,
+        artifact_document_builder,
+    ):
+        builder.build.assert_not_awaited()

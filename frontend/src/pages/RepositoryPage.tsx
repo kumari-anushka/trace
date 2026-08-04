@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   CircleGauge,
   LoaderCircle,
+  Network,
   ShieldCheck,
   Sparkles,
   TriangleAlert,
@@ -31,6 +32,7 @@ export function RepositoryPage() {
   const ingestionQuery = useRepositoryIngestion(repositoryId);
   const ingestionStatus = ingestionQuery.data?.ingestion_job.status;
   const ingestionProgress = ingestionQuery.data?.ingestion_job.progress ?? 0;
+  const latestVersion = versionsQuery.data?.[0];
 
   const pipelineCopy =
     ingestionStatus === "completed"
@@ -107,13 +109,39 @@ export function RepositoryPage() {
             <div className="repository-detail-content">
               <RepositoryHeader
                 repository={repositoryQuery.data}
-                latestVersion={versionsQuery.data?.[0]}
+                latestVersion={latestVersion}
               />
               <RepositoryStats
                 repository={repositoryQuery.data}
                 versions={versionsQuery.data ?? []}
                 isLoadingVersions={versionsQuery.isPending}
               />
+
+              {latestVersion ? (
+                <Link
+                  className="repository-graph-entry"
+                  to={`/repositories/${repositoryQuery.data.id}/graph`}
+                >
+                  <span
+                    className="repository-graph-entry__icon"
+                    aria-hidden="true"
+                  >
+                    <Network size={22} />
+                  </span>
+                  <span className="repository-graph-entry__copy">
+                    <small>Architecture explorer</small>
+                    <strong>Open the repository graph</strong>
+                    <span>
+                      Browse structure, imports, provenance, and graph metrics
+                      for commit {latestVersion.commit_sha.slice(0, 8)}.
+                    </span>
+                  </span>
+                  <span className="repository-graph-entry__action">
+                    Explore graph
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </span>
+                </Link>
+              ) : null}
 
               <div className="repository-dashboard">
                 {ingestionStatus ? (

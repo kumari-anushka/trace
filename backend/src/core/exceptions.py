@@ -58,6 +58,10 @@ class RepositoryVersionNotFoundError(TraceError):
     default_message = "Repository version not found"
 
 
+class GraphNodeNotFoundError(TraceError):
+    default_message = "Graph node not found"
+
+
 class IngestionJobNotFoundError(TraceError):
     default_message = "Ingestion job not found"
 
