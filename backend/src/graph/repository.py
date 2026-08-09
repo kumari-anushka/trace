@@ -26,6 +26,7 @@ from src.graph.models import (
 MAX_GRAPH_RESULT_NODES = 500
 MAX_GRAPH_RESULT_EDGES = 2_000
 MAX_GRAPH_RESULT_METRICS = 5_000
+MAX_GRAPH_RESULT_EVIDENCE = 500
 MAX_ANALYSIS_NODES = 25_000
 MAX_ANALYSIS_EDGES = 100_000
 MAX_METRIC_BATCH_SIZE = 1_000
@@ -117,6 +118,16 @@ class GraphRepository(Protocol):
     async def upsert_evidence(self, evidence: GraphEvidenceInput) -> GraphEvidence: ...
 
     async def upsert_metric(self, metric: GraphMetricInput) -> GraphMetric: ...
+
+    async def list_evidence(
+        self,
+        *,
+        repository_id: UUID,
+        repository_version_id: UUID,
+        target_node_id: UUID | None = None,
+        target_edge_id: UUID | None = None,
+        limit: int = 100,
+    ) -> tuple[Sequence[GraphEvidence], bool]: ...
 
     async def neighbors(
         self,
@@ -329,6 +340,36 @@ class PostgresGraphRepository:
         ).returning(GraphMetric)
         result = await self.session.execute(statement)
         return result.scalar_one()
+
+    async def list_evidence(
+        self,
+        *,
+        repository_id: UUID,
+        repository_version_id: UUID,
+        target_node_id: UUID | None = None,
+        target_edge_id: UUID | None = None,
+        limit: int = 100,
+    ) -> tuple[Sequence[GraphEvidence], bool]:
+        if not 1 <= limit <= MAX_GRAPH_RESULT_EVIDENCE:
+            raise GraphInvariantError(
+                f"Evidence limit must be between 1 and {MAX_GRAPH_RESULT_EVIDENCE}"
+            )
+        statement = select(GraphEvidence).where(
+            GraphEvidence.repository_id == repository_id,
+            or_(
+                GraphEvidence.repository_version_id == repository_version_id,
+                GraphEvidence.repository_version_id.is_(None),
+            ),
+        )
+        if target_node_id is not None:
+            statement = statement.where(GraphEvidence.target_node_id == target_node_id)
+        if target_edge_id is not None:
+            statement = statement.where(GraphEvidence.target_edge_id == target_edge_id)
+        result = await self.session.execute(
+            statement.order_by(GraphEvidence.canonical_key).limit(limit + 1)
+        )
+        evidence = result.scalars().all()
+        return evidence[:limit], len(evidence) > limit
 
     async def load_for_analysis(
         self,

@@ -11,7 +11,9 @@ from src.core.ontology import ONTOLOGY_VERSION
 from src.graph.dependencies import get_graph_service
 from src.graph.models import (
     EntityType,
+    EvidenceType,
     GraphEdge,
+    GraphEvidence,
     GraphMetric,
     GraphNode,
     KnowledgeKind,
@@ -221,3 +223,54 @@ def test_neighbor_query_returns_404_for_missing_node(app: FastAPI, client: TestC
 
     assert response.status_code == 404
     assert response.json() == {"message": "Graph node not found"}
+
+
+def test_get_evidence_returns_bounded_source_details(app: FastAPI, client: TestClient) -> None:
+    snapshot, root = graph_snapshot()
+    edge = snapshot.edges[0]
+    now = datetime.now(UTC)
+    evidence = GraphEvidence(
+        id=uuid4(),
+        repository_id=root.repository_id,
+        repository_version_id=root.repository_version_id,
+        canonical_key="evidence:main-import",
+        source_node_id=root.id,
+        target_node_id=None,
+        target_edge_id=edge.id,
+        evidence_type=EvidenceType.SOURCE_SPAN.value,
+        relationship=RelationshipType.IMPORTS.value,
+        excerpt="from app import helper",
+        source_url="https://github.test/acme/trace/blob/sha/src/main.py",
+        start_line=3,
+        end_line=3,
+        confidence=1.0,
+        provenance={"parser": "python_ast"},
+        details={"path": "src/main.py"},
+        created_at=now,
+        updated_at=now,
+    )
+    service = AsyncMock(spec=GraphService)
+    service.get_evidence.return_value = ((evidence,), False)
+    override_graph_service(app, service)
+
+    response = client.get(
+        (
+            f"/api/repositories/{root.repository_id}/versions/"
+            f"{root.repository_version_id}/graph/evidence"
+        ),
+        params={"target_edge_id": str(edge.id), "limit": 25},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 1
+    assert body["truncated"] is False
+    assert body["evidence"][0]["excerpt"] == "from app import helper"
+    assert body["evidence"][0]["metadata"] == {"path": "src/main.py"}
+    service.get_evidence.assert_awaited_once_with(
+        repository_id=root.repository_id,
+        repository_version_id=root.repository_version_id,
+        target_node_id=None,
+        target_edge_id=edge.id,
+        limit=25,
+    )

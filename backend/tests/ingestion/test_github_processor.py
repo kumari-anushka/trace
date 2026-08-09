@@ -7,6 +7,7 @@ from zipfile import ZipFile
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.ai.subsystems import SubsystemEnrichmentBuilder, SubsystemEnrichmentSummary
 from src.github.client import GitHubClient
 from src.github.schemas import GitHubCommit, GitHubPullRequest, GitHubRepository, GitHubTree
 from src.github.store import GitHubArtifactStore
@@ -22,10 +23,12 @@ from src.ingestion.models import (
     IngestionStageStatus,
 )
 from src.ingestion.processor import (
+    ARCHITECTURE_STAGE_NAME,
     ARTIFACT_DOCUMENTS_STAGE_NAME,
     ARTIFACTS_STAGE_NAME,
     COMMITS_STAGE_NAME,
     DOCUMENTATION_CHUNKS_STAGE_NAME,
+    EMBEDDINGS_STAGE_NAME,
     FILESYSTEM_GRAPH_STAGE_NAME,
     GRAPH_ANALYSIS_STAGE_NAME,
     HISTORICAL_GRAPH_STAGE_NAME,
@@ -37,6 +40,9 @@ from src.ingestion.processor import (
     SOURCE_CONTENTS_STAGE_NAME,
     SOURCE_SUMMARIES_STAGE_NAME,
     SOURCE_TREE_STAGE_NAME,
+    SUBSYSTEM_ENRICHMENT_STAGE_NAME,
+    SUBSYSTEM_GRAPH_STAGE_NAME,
+    SUBSYSTEMS_STAGE_NAME,
     GitHubIngestionLimits,
     GitHubIngestionProcessor,
 )
@@ -45,9 +51,13 @@ from src.repositories.models import Repository
 from src.repositories.service import RepositoryService
 from src.repository_versions.models import RepositoryVersion
 from src.repository_versions.service import RepositoryVersionService
+from src.semantic.architecture import ArchitectureBuilder, ArchitectureBuildSummary
 from src.semantic.artifacts import ArtifactDocumentBuilder, ArtifactDocumentSummary
 from src.semantic.documentation import DocumentationChunkBuilder, DocumentationChunkSummary
+from src.semantic.embeddings import EmbeddingBuilder, EmbeddingBuildSummary
 from src.semantic.source_summaries import SourceSummaryBuilder, SourceSummaryBuildSummary
+from src.semantic.subsystem_graph import SubsystemGraphBuilder, SubsystemGraphSummary
+from src.semantic.subsystems import SubsystemDiscoveryBuilder, SubsystemDiscoverySummary
 
 SNAPSHOT_SHA = "a" * 40
 TREE_SHA = "f" * 40
@@ -61,6 +71,11 @@ def empty_snapshot_archive() -> bytes:
 
 
 def graph_builder_mocks() -> tuple[
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
+    AsyncMock,
     AsyncMock,
     AsyncMock,
     AsyncMock,
@@ -163,6 +178,52 @@ def graph_builder_mocks() -> tuple[
         truncated_imports=0,
         stale_documents=0,
     )
+    embedding_builder = AsyncMock(spec=EmbeddingBuilder)
+    embedding_builder.build.return_value = EmbeddingBuildSummary(
+        provider="local",
+        model="trace-feature-hashing",
+        dimensions=384,
+        documents=0,
+        batches=0,
+    )
+    subsystem_builder = AsyncMock(spec=SubsystemDiscoveryBuilder)
+    subsystem_builder.build.return_value = SubsystemDiscoverySummary(
+        files=0,
+        candidates=0,
+        memberships=0,
+        evidence=0,
+        stale_candidates=0,
+    )
+    subsystem_enrichment_builder = AsyncMock(spec=SubsystemEnrichmentBuilder)
+    subsystem_enrichment_builder.build.return_value = SubsystemEnrichmentSummary(
+        provider_available=False,
+        candidates=0,
+        enriched=0,
+        confirmed=0,
+        retained_as_candidates=0,
+        rejected=0,
+        model_evidence=0,
+    )
+    architecture_builder = AsyncMock(spec=ArchitectureBuilder)
+    architecture_builder.build.return_value = ArchitectureBuildSummary(
+        files=0,
+        entry_points=0,
+        external_dependencies=0,
+        major_external_dependencies=0,
+        subsystems=0,
+        confirmed_subsystems=0,
+        derived_edges=0,
+        evidence=0,
+        stale_edges=0,
+    )
+    subsystem_graph_builder = AsyncMock(spec=SubsystemGraphBuilder)
+    subsystem_graph_builder.build.return_value = SubsystemGraphSummary(
+        subsystems=0,
+        file_imports=0,
+        dependencies=0,
+        evidence=0,
+        stale_dependencies=0,
+    )
     return (
         filesystem_builder,
         python_builder,
@@ -172,6 +233,11 @@ def graph_builder_mocks() -> tuple[
         documentation_builder,
         artifact_document_builder,
         source_summary_builder,
+        embedding_builder,
+        subsystem_builder,
+        subsystem_enrichment_builder,
+        subsystem_graph_builder,
+        architecture_builder,
     )
 
 
@@ -217,6 +283,11 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
             DOCUMENTATION_CHUNKS_STAGE_NAME,
             ARTIFACT_DOCUMENTS_STAGE_NAME,
             SOURCE_SUMMARIES_STAGE_NAME,
+            EMBEDDINGS_STAGE_NAME,
+            SUBSYSTEMS_STAGE_NAME,
+            SUBSYSTEM_ENRICHMENT_STAGE_NAME,
+            SUBSYSTEM_GRAPH_STAGE_NAME,
+            ARCHITECTURE_STAGE_NAME,
         )
     ):
         stage = IngestionStage(
@@ -247,6 +318,11 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         documentation_builder,
         artifact_document_builder,
         source_summary_builder,
+        embedding_builder,
+        subsystem_builder,
+        subsystem_enrichment_builder,
+        subsystem_graph_builder,
+        architecture_builder,
     ) = graph_builder_mocks()
 
     stage_service.list_stages.return_value = []
@@ -326,6 +402,11 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         documentation_chunk_builder=documentation_builder,
         artifact_document_builder=artifact_document_builder,
         source_summary_builder=source_summary_builder,
+        embedding_builder=embedding_builder,
+        subsystem_discovery_builder=subsystem_builder,
+        subsystem_enrichment_builder=subsystem_enrichment_builder,
+        subsystem_graph_builder=subsystem_graph_builder,
+        architecture_builder=architecture_builder,
         limits=GitHubIngestionLimits(),
     )
 
@@ -342,23 +423,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         tree_sha=TREE_SHA,
     )
     assert github_client.list_commits.await_args.kwargs["snapshot_sha"] == SNAPSHOT_SHA
-    assert [stage.status for stage in stages] == [
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-        IngestionStageStatus.COMPLETED,
-    ]
+    assert all(stage.status is IngestionStageStatus.COMPLETED for stage in stages)
     for builder in (
         filesystem_builder,
         python_builder,
@@ -368,6 +433,11 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         documentation_builder,
         artifact_document_builder,
         source_summary_builder,
+        embedding_builder,
+        subsystem_builder,
+        subsystem_enrichment_builder,
+        subsystem_graph_builder,
+        architecture_builder,
     ):
         builder.build.assert_awaited_once_with(
             repository_id=repository.id,
@@ -415,6 +485,11 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         DOCUMENTATION_CHUNKS_STAGE_NAME,
         ARTIFACT_DOCUMENTS_STAGE_NAME,
         SOURCE_SUMMARIES_STAGE_NAME,
+        EMBEDDINGS_STAGE_NAME,
+        SUBSYSTEMS_STAGE_NAME,
+        SUBSYSTEM_ENRICHMENT_STAGE_NAME,
+        SUBSYSTEM_GRAPH_STAGE_NAME,
+        ARCHITECTURE_STAGE_NAME,
     )
     stages = []
     for position, name in enumerate(stage_names):
@@ -475,6 +550,11 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         documentation_builder,
         artifact_document_builder,
         source_summary_builder,
+        embedding_builder,
+        subsystem_builder,
+        subsystem_enrichment_builder,
+        subsystem_graph_builder,
+        architecture_builder,
     ) = graph_builder_mocks()
     stage_service.list_stages.return_value = stages
     version_service.get_repository_version.return_value = version
@@ -525,6 +605,11 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         documentation_chunk_builder=documentation_builder,
         artifact_document_builder=artifact_document_builder,
         source_summary_builder=source_summary_builder,
+        embedding_builder=embedding_builder,
+        subsystem_discovery_builder=subsystem_builder,
+        subsystem_enrichment_builder=subsystem_enrichment_builder,
+        subsystem_graph_builder=subsystem_graph_builder,
+        architecture_builder=architecture_builder,
         limits=GitHubIngestionLimits(),
     )
 
@@ -550,5 +635,10 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         documentation_builder,
         artifact_document_builder,
         source_summary_builder,
+        embedding_builder,
+        subsystem_builder,
+        subsystem_enrichment_builder,
+        subsystem_graph_builder,
+        architecture_builder,
     ):
         builder.build.assert_not_awaited()

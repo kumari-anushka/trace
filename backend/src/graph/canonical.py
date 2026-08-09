@@ -35,6 +35,19 @@ def external_dependency_key(
     )
 
 
+def subsystem_key(
+    repository_id: UUID,
+    repository_version_id: UUID,
+    member_canonical_keys: tuple[str, ...],
+) -> str:
+    digest = sha256("\0".join(member_canonical_keys).encode()).hexdigest()
+    return f"{snapshot_key(repository_id, repository_version_id)}:subsystem:{digest}"
+
+
+def architecture_summary_key(repository_id: UUID, repository_version_id: UUID) -> str:
+    return f"{snapshot_key(repository_id, repository_version_id)}:architecture_summary"
+
+
 def person_key(github_user_id: int) -> str:
     return f"github:person:{github_user_id}"
 

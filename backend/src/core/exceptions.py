@@ -25,7 +25,11 @@ class GitHubAPIError(TraceError):
     default_message = "GitHub API request failed"
 
 
-class RetryableGitHubAPIError(GitHubAPIError):
+class RetryableProviderError(TraceError):
+    default_message = "External provider request failed temporarily"
+
+
+class RetryableGitHubAPIError(GitHubAPIError, RetryableProviderError):
     default_message = "GitHub API request failed temporarily"
 
 
@@ -40,6 +44,14 @@ class GitHubRateLimitError(RetryableGitHubAPIError):
     ) -> None:
         self.retry_after_seconds = retry_after_seconds
         super().__init__(message)
+
+
+class OpenAIAPIError(TraceError):
+    default_message = "OpenAI API request failed"
+
+
+class RetryableOpenAIAPIError(OpenAIAPIError, RetryableProviderError):
+    default_message = "OpenAI API request failed temporarily"
 
 
 class RepositoryAlreadyExistsError(TraceError):

@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import IngestionJobNotFoundError, RetryableGitHubAPIError
+from src.core.exceptions import IngestionJobNotFoundError, RetryableOpenAIAPIError
 from src.ingestion.models import IngestionJob, IngestionJobStatus
 from src.ingestion.queue import (
     IngestionConsumer,
@@ -159,7 +159,7 @@ async def test_run_once_leaves_retryable_provider_failure_pending() -> None:
     ingestion_job = make_ingestion_job()
     consumer.read.return_value = make_message(ingestion_job.id)
     ingestion_service.get_job.return_value = ingestion_job
-    processor.process.side_effect = RetryableGitHubAPIError("GitHub unavailable")
+    processor.process.side_effect = RetryableOpenAIAPIError("OpenAI unavailable")
 
     processed = await worker.run_once()
 

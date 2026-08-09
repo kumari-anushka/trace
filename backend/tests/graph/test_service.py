@@ -121,3 +121,43 @@ async def test_graph_service_forwards_valid_scoped_query() -> None:
         metric_names=(),
         include_metrics=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_graph_service_forwards_scoped_evidence_query() -> None:
+    service, graph_repository, repository_store, version_store = make_service()
+    repository = Repository(
+        github_id=2,
+        github_url="https://github.test/acme/evidence",
+        owner="acme",
+        name="evidence",
+        default_branch="main",
+    )
+    repository.id = uuid4()
+    version = RepositoryVersion(
+        repository_id=repository.id,
+        commit_sha="b" * 40,
+        branch="main",
+    )
+    version.id = uuid4()
+    target_edge_id = uuid4()
+    repository_store.get_by_id.return_value = repository
+    version_store.get_by_id.return_value = version
+    graph_repository.list_evidence.return_value = ((), False)
+
+    result = await service.get_evidence(
+        repository_id=repository.id,
+        repository_version_id=version.id,
+        target_node_id=None,
+        target_edge_id=target_edge_id,
+        limit=25,
+    )
+
+    assert result == ((), False)
+    graph_repository.list_evidence.assert_awaited_once_with(
+        repository_id=repository.id,
+        repository_version_id=version.id,
+        target_node_id=None,
+        target_edge_id=target_edge_id,
+        limit=25,
+    )

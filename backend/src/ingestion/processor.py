@@ -4,7 +4,8 @@ from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import RetryableGitHubAPIError
+from src.ai.subsystems import SubsystemEnrichmentBuilder
+from src.core.exceptions import RetryableProviderError
 from src.github.classification import extract_text_files_from_zip
 from src.github.client import GitHubClient
 from src.github.store import GitHubArtifactStore
@@ -18,9 +19,13 @@ from src.ingestion.runner import MAX_ERROR_MESSAGE_LENGTH
 from src.ingestion.service import IngestionService, IngestionStageService
 from src.repositories.service import RepositoryService
 from src.repository_versions.service import RepositoryVersionService
+from src.semantic.architecture import ArchitectureBuilder
 from src.semantic.artifacts import ArtifactDocumentBuilder
 from src.semantic.documentation import DocumentationChunkBuilder
+from src.semantic.embeddings import EmbeddingBuilder
 from src.semantic.source_summaries import SourceSummaryBuilder
+from src.semantic.subsystem_graph import SubsystemGraphBuilder
+from src.semantic.subsystems import SubsystemDiscoveryBuilder
 
 FOUNDATION_STAGE_NAME = "prepare_repository_snapshot"
 METADATA_STAGE_NAME = "fetch_repository_metadata"
@@ -38,6 +43,11 @@ GRAPH_ANALYSIS_STAGE_NAME = "analyze_repository_graph"
 DOCUMENTATION_CHUNKS_STAGE_NAME = "chunk_repository_documentation"
 ARTIFACT_DOCUMENTS_STAGE_NAME = "chunk_repository_artifacts"
 SOURCE_SUMMARIES_STAGE_NAME = "summarize_source_files"
+EMBEDDINGS_STAGE_NAME = "embed_semantic_documents"
+SUBSYSTEMS_STAGE_NAME = "discover_subsystem_candidates"
+SUBSYSTEM_ENRICHMENT_STAGE_NAME = "enrich_subsystem_candidates"
+SUBSYSTEM_GRAPH_STAGE_NAME = "generate_subsystem_graph"
+ARCHITECTURE_STAGE_NAME = "generate_architecture_summary"
 
 STAGE_DEFINITIONS = (
     (METADATA_STAGE_NAME, 0, 15),
@@ -55,6 +65,11 @@ STAGE_DEFINITIONS = (
     (DOCUMENTATION_CHUNKS_STAGE_NAME, 12, 99),
     (ARTIFACT_DOCUMENTS_STAGE_NAME, 13, 99),
     (SOURCE_SUMMARIES_STAGE_NAME, 14, 99),
+    (EMBEDDINGS_STAGE_NAME, 15, 99),
+    (SUBSYSTEMS_STAGE_NAME, 16, 99),
+    (SUBSYSTEM_ENRICHMENT_STAGE_NAME, 17, 99),
+    (SUBSYSTEM_GRAPH_STAGE_NAME, 18, 99),
+    (ARCHITECTURE_STAGE_NAME, 19, 99),
 )
 
 
@@ -180,6 +195,11 @@ class GitHubIngestionProcessor:
         documentation_chunk_builder: DocumentationChunkBuilder,
         artifact_document_builder: ArtifactDocumentBuilder,
         source_summary_builder: SourceSummaryBuilder,
+        embedding_builder: EmbeddingBuilder,
+        subsystem_discovery_builder: SubsystemDiscoveryBuilder,
+        subsystem_enrichment_builder: SubsystemEnrichmentBuilder,
+        subsystem_graph_builder: SubsystemGraphBuilder,
+        architecture_builder: ArchitectureBuilder,
         limits: GitHubIngestionLimits,
     ) -> None:
         self.session = session
@@ -197,6 +217,11 @@ class GitHubIngestionProcessor:
         self.documentation_chunk_builder = documentation_chunk_builder
         self.artifact_document_builder = artifact_document_builder
         self.source_summary_builder = source_summary_builder
+        self.embedding_builder = embedding_builder
+        self.subsystem_discovery_builder = subsystem_discovery_builder
+        self.subsystem_enrichment_builder = subsystem_enrichment_builder
+        self.subsystem_graph_builder = subsystem_graph_builder
+        self.architecture_builder = architecture_builder
         self.limits = limits
 
     async def process(self, ingestion_job: IngestionJob) -> None:
@@ -595,6 +620,76 @@ class GitHubIngestionProcessor:
             action=source_summaries_action,
         )
 
+        async def embeddings_action() -> dict[str, object]:
+            summary = await self.embedding_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[EMBEDDINGS_STAGE_NAME],
+            completed_progress=99,
+            action=embeddings_action,
+        )
+
+        async def subsystems_action() -> dict[str, object]:
+            summary = await self.subsystem_discovery_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[SUBSYSTEMS_STAGE_NAME],
+            completed_progress=99,
+            action=subsystems_action,
+        )
+
+        async def subsystem_enrichment_action() -> dict[str, object]:
+            summary = await self.subsystem_enrichment_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[SUBSYSTEM_ENRICHMENT_STAGE_NAME],
+            completed_progress=99,
+            action=subsystem_enrichment_action,
+        )
+
+        async def subsystem_graph_action() -> dict[str, object]:
+            summary = await self.subsystem_graph_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[SUBSYSTEM_GRAPH_STAGE_NAME],
+            completed_progress=99,
+            action=subsystem_graph_action,
+        )
+
+        async def architecture_action() -> dict[str, object]:
+            summary = await self.architecture_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[ARCHITECTURE_STAGE_NAME],
+            completed_progress=99,
+            action=architecture_action,
+        )
+
     async def _ensure_stages(self, ingestion_job: IngestionJob) -> dict[str, IngestionStage]:
         existing = {
             stage.name: stage for stage in await self.stage_service.list_stages(ingestion_job.id)
@@ -638,7 +733,7 @@ class GitHubIngestionProcessor:
             await self._advance_job_progress(ingestion_job, completed_progress)
             await self.session.commit()
         except Exception as error:
-            if isinstance(error, RetryableGitHubAPIError):
+            if isinstance(error, RetryableProviderError):
                 await self.session.rollback()
                 raise
             await self._record_stage_failure(ingestion_stage=ingestion_stage, error=error)

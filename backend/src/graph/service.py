@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from src.core.exceptions import RepositoryNotFoundError, RepositoryVersionNotFoundError
-from src.graph.models import EntityType, KnowledgeKind, RelationshipType
+from src.graph.models import EntityType, GraphEvidence, KnowledgeKind, RelationshipType
 from src.graph.repository import GraphRepository, GraphSnapshot
 from src.repositories.store import RepositoryStore
 from src.repository_versions.store import RepositoryVersionStore
@@ -80,6 +80,24 @@ class GraphService:
             knowledge_kinds=knowledge_kinds,
             metric_names=metric_names,
             include_metrics=include_metrics,
+        )
+
+    async def get_evidence(
+        self,
+        *,
+        repository_id: UUID,
+        repository_version_id: UUID,
+        target_node_id: UUID | None,
+        target_edge_id: UUID | None,
+        limit: int,
+    ) -> tuple[Sequence[GraphEvidence], bool]:
+        await self._validate_scope(repository_id, repository_version_id)
+        return await self.graph_repository.list_evidence(
+            repository_id=repository_id,
+            repository_version_id=repository_version_id,
+            target_node_id=target_node_id,
+            target_edge_id=target_edge_id,
+            limit=limit,
         )
 
     async def _validate_scope(self, repository_id: UUID, repository_version_id: UUID) -> None:

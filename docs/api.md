@@ -1,7 +1,7 @@
 # Trace API
 
-This document describes the API that is implemented today. Planned Atlas
-endpoints are listed separately and are not part of the current contract.
+This document describes the API that is implemented today, including the
+bounded graph and evidence reads used by the Software Atlas.
 
 ## Local URLs
 
@@ -302,6 +302,18 @@ direction and always includes the requested root node. Responses expose
 `nodes_truncated`, `edges_truncated`, and `metrics_truncated`; clients must not
 assume a truncated response is the complete graph.
 
+### Get bounded graph evidence
+
+```http
+GET /api/repositories/{repository_id}/versions/{repository_version_id}/graph/evidence
+```
+
+Optional `target_node_id` and `target_edge_id` filters support Atlas evidence
+drawers. Each item includes its evidence type, source node, target, excerpt,
+source URL, exact line range when available, confidence, provenance, and
+metadata. The default limit is 100 and the hard maximum is 500; `truncated`
+indicates that more evidence exists.
+
 ## Idempotency
 
 Trace permits at most one active ingestion job per immutable repository
@@ -313,6 +325,6 @@ unique index, protecting against simultaneous requests.
 
 ## Planned endpoints
 
-Atlas overview, architecture, subsystems, timeline, decisions, contributors,
-search, evidence, retry, and cited-question endpoints are planned for
-later roadmap weeks. They are intentionally not documented as available yet.
+Decisions, contributors, search, retry, and cited-question endpoints are planned
+for later roadmap weeks. Week 4 Atlas screens use the bounded graph, neighbor,
+and evidence endpoints documented above.

@@ -105,3 +105,38 @@ export type GraphResponse = {
   edges: GraphEdge[];
   metrics: GraphMetric[];
 };
+
+export type GraphEvidence = {
+  id: string;
+  repository_id: string;
+  repository_version_id: string | null;
+  canonical_key: string;
+  source_node_id: string;
+  target_node_id: string | null;
+  target_edge_id: string | null;
+  evidence_type:
+    | "artifact"
+    | "source_span"
+    | "graph_path"
+    | "metric"
+    | "provider_relation"
+    | "model_inference";
+  relationship: GraphRelationshipType | null;
+  excerpt: string | null;
+  source_url: string | null;
+  start_line: number | null;
+  end_line: number | null;
+  confidence: number;
+  provenance: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GraphEvidenceListResponse = {
+  repository_id: string;
+  repository_version_id: string;
+  count: number;
+  truncated: boolean;
+  evidence: GraphEvidence[];
+};

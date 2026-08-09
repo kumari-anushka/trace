@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.graph.models import EntityType, KnowledgeKind, RelationshipType
+from src.graph.models import EntityType, EvidenceType, KnowledgeKind, RelationshipType
 from src.graph.repository import GraphSnapshot
 
 
@@ -60,6 +60,37 @@ class GraphMetricResponse(BaseModel):
     metadata: dict[str, object] = Field(validation_alias="details")
     created_at: datetime
     updated_at: datetime
+
+
+class GraphEvidenceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    repository_id: UUID
+    repository_version_id: UUID | None
+    canonical_key: str
+    source_node_id: UUID
+    target_node_id: UUID | None
+    target_edge_id: UUID | None
+    evidence_type: EvidenceType
+    relationship: RelationshipType | None
+    excerpt: str | None
+    source_url: str | None
+    start_line: int | None
+    end_line: int | None
+    confidence: float
+    provenance: dict[str, object]
+    metadata: dict[str, object] = Field(validation_alias="details")
+    created_at: datetime
+    updated_at: datetime
+
+
+class GraphEvidenceListResponse(BaseModel):
+    repository_id: UUID
+    repository_version_id: UUID
+    count: int
+    truncated: bool
+    evidence: list[GraphEvidenceResponse]
 
 
 class GraphResponse(BaseModel):

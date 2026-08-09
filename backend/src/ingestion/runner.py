@@ -4,7 +4,7 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import IngestionJobNotFoundError, RetryableGitHubAPIError
+from src.core.exceptions import IngestionJobNotFoundError, RetryableProviderError
 from src.ingestion.models import IngestionJob, IngestionJobStatus
 from src.ingestion.queue import (
     IngestionConsumer,
@@ -104,7 +104,7 @@ class IngestionWorker:
 
         try:
             await self.processor.process(ingestion_job)
-        except RetryableGitHubAPIError as error:
+        except RetryableProviderError as error:
             await self.session.rollback()
             logger.warning(
                 "Ingestion provider call will be retried",
