@@ -174,7 +174,6 @@ class _JavaScriptExtractor:
         self.exports: list[JavaScriptExport] = []
 
     def extract(self, root: Node) -> None:
-        self._extract_exports(root)
         self._walk(root, ())
 
     def _walk(self, node: Node, scopes: tuple[str, ...]) -> None:
@@ -231,10 +230,17 @@ class _JavaScriptExtractor:
                     self._walk(value_node, child_scopes)
                 return
 
+        if node.type == "export_statement":
+            self._extract_export_statement(node)
+            if node.child_by_field_name("source") is not None:
+                self._extract_re_export_imports(node, scopes)
+        elif node.type == "assignment_expression":
+            exported = self._commonjs_export(node)
+            if exported is not None:
+                self.exports.append(exported)
+
         if node.type == "import_statement":
             self._extract_import_statement(node, scopes)
-        elif node.type == "export_statement" and node.child_by_field_name("source"):
-            self._extract_re_export_imports(node, scopes)
         elif node.type == "call_expression":
             parsed_import = self._extract_call_import(node, scopes)
             if parsed_import is not None:
@@ -368,15 +374,6 @@ class _JavaScriptExtractor:
                     scopes=scopes,
                 )
             )
-
-    def _extract_exports(self, root: Node) -> None:
-        for node in _descendants(root):
-            if node.type == "export_statement":
-                self._extract_export_statement(node)
-            elif node.type == "assignment_expression":
-                exported = self._commonjs_export(node)
-                if exported is not None:
-                    self.exports.append(exported)
 
     def _extract_export_statement(self, node: Node) -> None:
         source_node = node.child_by_field_name("source")
@@ -571,9 +568,7 @@ class _JavaScriptExtractor:
             "React.forwardRef",
         }:
             return False
-        return any(
-            child.type in {"arrow_function", "function_expression"} for child in _descendants(node)
-        )
+        return _contains_node_type(node, {"arrow_function", "function_expression"})
 
     def _extends_react_component(self, node: Node) -> bool:
         if node.type not in {"class_declaration", "abstract_class_declaration"}:
@@ -659,18 +654,17 @@ class _JavaScriptExtractor:
         return "\n".join(lines[:6])[:1000]
 
 
-def _descendants(node: Node) -> list[Node]:
-    descendants = [node]
-    for child in node.named_children:
-        descendants.extend(_descendants(child))
-    return descendants
-
-
 def _contains_jsx(node: Node) -> bool:
-    return any(
-        child.type in {"jsx_element", "jsx_self_closing_element", "jsx_fragment"}
-        for child in _descendants(node)
+    return _contains_node_type(
+        node,
+        {"jsx_element", "jsx_self_closing_element", "jsx_fragment"},
     )
+
+
+def _contains_node_type(node: Node, node_types: set[str]) -> bool:
+    if node.type in node_types:
+        return True
+    return any(_contains_node_type(child, node_types) for child in node.named_children)
 
 
 def _first_error(node: Node) -> Node | None:

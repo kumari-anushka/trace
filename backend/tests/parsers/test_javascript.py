@@ -79,6 +79,20 @@ module.exports.value = 1;
     assert {item.name for item in result.exports} == {"run", "value"}
 
 
+def test_extracts_large_tsx_tree_without_recursive_descendant_materialization() -> None:
+    elements = "\n".join(f"<span>Stage {index}</span>" for index in range(600))
+
+    result = JavaScriptParser().parse(
+        path="src/LargePage.tsx",
+        content=(f"export function LargePage() {{\n  return <main>\n{elements}\n  </main>;\n}}\n"),
+    )
+
+    assert result.failure is None
+    assert [symbol.qualified_name for symbol in result.symbols] == ["LargePage"]
+    assert result.symbols[0].is_component is True
+    assert [exported.name for exported in result.exports] == ["LargePage"]
+
+
 @pytest.mark.parametrize("path", ["broken.ts", "broken.jsx"])
 def test_syntax_failure_is_structured(path: str) -> None:
     result = JavaScriptParser().parse(path=path, content="export function broken( {\n")

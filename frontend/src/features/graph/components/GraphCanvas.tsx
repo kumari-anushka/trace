@@ -72,6 +72,26 @@ const graphStyles: StylesheetStyle[] = [
     },
   },
   {
+    selector: 'node[type = "subsystem"]',
+    style: {
+      "background-color": "#4f63a8",
+      "border-color": "#a9b8ff",
+      shape: "round-rectangle",
+      height: 34,
+      width: 34,
+    },
+  },
+  {
+    selector: 'node[type = "architecture_summary"]',
+    style: {
+      "background-color": "#5b9cff",
+      "border-color": "#d5e6ff",
+      shape: "diamond",
+      height: 38,
+      width: 38,
+    },
+  },
+  {
     selector: "node:selected",
     style: {
       "border-color": "#ffffff",
@@ -98,6 +118,16 @@ const graphStyles: StylesheetStyle[] = [
       "target-arrow-shape": "triangle",
       "arrow-scale": 0.7,
       opacity: 0.8,
+    },
+  },
+  {
+    selector: 'edge[relationship = "DEPENDS_ON"]',
+    style: {
+      "line-color": "#78adff",
+      "target-arrow-color": "#78adff",
+      "target-arrow-shape": "triangle",
+      "arrow-scale": 0.7,
+      opacity: 0.82,
     },
   },
   {

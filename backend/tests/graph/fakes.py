@@ -93,6 +93,26 @@ class MemoryGraphRepository:
     async def upsert_metric(self, metric: GraphMetricInput) -> GraphMetric:
         raise NotImplementedError
 
+    async def list_evidence(
+        self,
+        *,
+        repository_id: UUID,
+        repository_version_id: UUID,
+        target_node_id: UUID | None = None,
+        target_edge_id: UUID | None = None,
+        limit: int = 100,
+    ) -> tuple[Sequence[GraphEvidence], bool]:
+        matching = [
+            item
+            for (item_repository_id, _), item in self.evidence.items()
+            if item_repository_id == repository_id
+            and item.repository_version_id == repository_version_id
+            and (target_node_id is None or item.target_node_id == target_node_id)
+            and (target_edge_id is None or item.target_edge_id == target_edge_id)
+        ]
+        ordered = sorted(matching, key=lambda item: item.canonical_key)
+        return ordered[:limit], len(ordered) > limit
+
     async def neighbors(
         self,
         *,

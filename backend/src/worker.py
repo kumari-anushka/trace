@@ -6,6 +6,9 @@ import socket
 import httpx
 from redis.asyncio import Redis
 
+from src.ai.openai import OpenAISubsystemEnrichmentProvider
+from src.ai.openai_embeddings import OpenAIEmbeddingProvider
+from src.ai.subsystems import PostgresSubsystemEnrichmentReader, SubsystemEnrichmentBuilder
 from src.core.config import get_settings
 from src.db import models as _models  # noqa: F401
 from src.db.session import async_session_factory, engine
@@ -26,13 +29,17 @@ from src.repositories.service import RepositoryService
 from src.repositories.store import RepositoryStore
 from src.repository_versions.service import RepositoryVersionService
 from src.repository_versions.store import RepositoryVersionStore
+from src.semantic.architecture import ArchitectureBuilder, PostgresArchitectureStore
 from src.semantic.artifacts import ArtifactDocumentBuilder, PostgresArtifactSourceReader
 from src.semantic.documentation import (
     DocumentationChunkBuilder,
     PostgresDocumentationSourceReader,
 )
+from src.semantic.embeddings import EmbeddingBuilder, LocalHashingEmbeddingProvider
 from src.semantic.repository import PostgresSemanticRepository
 from src.semantic.source_summaries import PostgresSourceSummaryReader, SourceSummaryBuilder
+from src.semantic.subsystem_graph import PostgresSubsystemGraphStore, SubsystemGraphBuilder
+from src.semantic.subsystems import PostgresSubsystemDiscoveryStore, SubsystemDiscoveryBuilder
 
 
 async def run_worker() -> None:
@@ -50,6 +57,9 @@ async def run_worker() -> None:
         async with (
             async_session_factory() as session,
             httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as github_http_client,
+            httpx.AsyncClient(
+                timeout=httpx.Timeout(settings.openai_timeout_seconds)
+            ) as openai_http_client,
         ):
             ingestion_service = IngestionService(
                 store=IngestionJobStore(session=session),
@@ -63,6 +73,35 @@ async def run_worker() -> None:
             repository_store = RepositoryStore(session=session)
             graph_repository = PostgresGraphRepository(session=session)
             semantic_repository = PostgresSemanticRepository(session=session)
+            subsystem_store = PostgresSubsystemDiscoveryStore(session=session)
+            subsystem_enrichment_reader = PostgresSubsystemEnrichmentReader(session=session)
+            architecture_store = PostgresArchitectureStore(session=session)
+            subsystem_graph_store = PostgresSubsystemGraphStore(session=session)
+            subsystem_enrichment_provider = (
+                OpenAISubsystemEnrichmentProvider(
+                    http_client=openai_http_client,
+                    api_key=settings.openai_api_key or "",
+                    model=settings.openai_subsystem_model,
+                    api_url=settings.openai_api_url,
+                    max_output_tokens=settings.openai_max_output_tokens,
+                    max_retries=settings.openai_max_retries,
+                    max_retry_delay_seconds=settings.openai_max_retry_delay_seconds,
+                )
+                if settings.openai_subsystem_enrichment_enabled
+                else None
+            )
+            embedding_provider = (
+                OpenAIEmbeddingProvider(
+                    http_client=openai_http_client,
+                    api_key=settings.openai_api_key or "",
+                    model=settings.openai_embedding_model,
+                    api_url=settings.openai_api_url,
+                    max_retries=settings.openai_max_retries,
+                    max_retry_delay_seconds=settings.openai_max_retry_delay_seconds,
+                )
+                if settings.embedding_provider == "openai"
+                else LocalHashingEmbeddingProvider()
+            )
             processor = GitHubIngestionProcessor(
                 session=session,
                 ingestion_service=ingestion_service,
@@ -108,6 +147,31 @@ async def run_worker() -> None:
                 source_summary_builder=SourceSummaryBuilder(
                     semantic_repository=semantic_repository,
                     source_reader=PostgresSourceSummaryReader(session=session),
+                ),
+                embedding_builder=EmbeddingBuilder(
+                    semantic_repository=semantic_repository,
+                    provider=embedding_provider,
+                    batch_size=settings.embedding_batch_size,
+                ),
+                subsystem_discovery_builder=SubsystemDiscoveryBuilder(
+                    graph_repository=graph_repository,
+                    signal_reader=subsystem_store,
+                    candidate_store=subsystem_store,
+                ),
+                subsystem_enrichment_builder=SubsystemEnrichmentBuilder(
+                    graph_repository=graph_repository,
+                    reader=subsystem_enrichment_reader,
+                    provider=subsystem_enrichment_provider,
+                ),
+                subsystem_graph_builder=SubsystemGraphBuilder(
+                    graph_repository=graph_repository,
+                    reader=subsystem_graph_store,
+                    store=subsystem_graph_store,
+                ),
+                architecture_builder=ArchitectureBuilder(
+                    graph_repository=graph_repository,
+                    reader=architecture_store,
+                    store=architecture_store,
                 ),
                 limits=GitHubIngestionLimits(
                     labels=settings.github_label_limit,

@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +33,19 @@ class Settings(BaseSettings):
     github_archive_max_bytes: int = 250_000_000
     github_source_file_max_bytes: int = 1_000_000
 
+    embedding_batch_size: int = 64
+    embedding_provider: str = "local"
+
+    openai_api_url: str = "https://api.openai.com/v1"
+    openai_api_key: str | None = None
+    openai_subsystem_enrichment_enabled: bool = False
+    openai_subsystem_model: str = "gpt-5.6-sol"
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_max_output_tokens: int = 800
+    openai_max_retries: int = 2
+    openai_max_retry_delay_seconds: float = 15.0
+    openai_timeout_seconds: float = 60.0
+
     cors_origins: str = "http://localhost:5173"
 
     @field_validator("database_url", mode="before")
@@ -56,6 +69,58 @@ class Settings(BaseSettings):
             )
 
         return value
+
+    @field_validator("embedding_batch_size")
+    @classmethod
+    def validate_embedding_batch_size(cls, value: int) -> int:
+        if value < 1 or value > 256:
+            raise ValueError("embedding_batch_size must be between 1 and 256")
+        return value
+
+    @field_validator("embedding_provider")
+    @classmethod
+    def validate_embedding_provider(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"local", "openai"}:
+            raise ValueError("embedding_provider must be local or openai")
+        return normalized
+
+    @field_validator("openai_subsystem_model", "openai_embedding_model")
+    @classmethod
+    def validate_openai_model(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("OpenAI model settings cannot be empty")
+        return normalized
+
+    @field_validator("openai_max_output_tokens")
+    @classmethod
+    def validate_openai_max_output_tokens(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("openai_max_output_tokens must be positive")
+        return value
+
+    @field_validator("openai_max_retries")
+    @classmethod
+    def validate_openai_max_retries(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("openai_max_retries cannot be negative")
+        return value
+
+    @field_validator("openai_max_retry_delay_seconds", "openai_timeout_seconds")
+    @classmethod
+    def validate_positive_openai_duration(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("OpenAI duration settings must be positive")
+        return value
+
+    @model_validator(mode="after")
+    def validate_openai_enrichment_configuration(self) -> "Settings":
+        if (self.openai_subsystem_enrichment_enabled or self.embedding_provider == "openai") and (
+            not self.openai_api_key or not self.openai_api_key.strip()
+        ):
+            raise ValueError("openai_api_key is required when an OpenAI provider is enabled")
+        return self
 
     @property
     def allowed_origins(self) -> list[str]:

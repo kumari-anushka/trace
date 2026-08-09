@@ -1,7 +1,8 @@
-# Week 4 — Semantic Persistence
+# Week 4 — Core Software Atlas
 
-Week 4 starts with the storage and retrieval boundary required by chunking,
-embeddings, subsystem discovery, and later hybrid retrieval.
+Week 4 is complete. Trace now turns its deterministic repository graph into an
+evidence-backed Software Atlas with semantic documents, embeddings, cautious
+subsystem inference, architecture facts, and browsable Atlas screens.
 
 ## Documents Are Chunks
 
@@ -112,10 +113,117 @@ migration enables the `vector` extension before creating vector columns and
 leaves the extension installed on downgrade because it may be shared by later
 semantic tables.
 
-## Next Slice
+## Embedding Pipeline
 
-Add a provider-neutral embedding adapter that consumes pending documents,
-persists content-hash-bound vectors, and supports reproducible local testing.
+The `embed_semantic_documents` ingestion stage consumes pending or stale
+documents in bounded batches and persists content-hash-bound vectors through a
+provider-neutral adapter. Re-running the stage does no work for current vectors,
+while changed document content is embedded again.
+
+Local development and CI default to `trace-feature-hashing`, a dependency-free,
+384-dimensional lexical baseline using deterministic feature hashing over tokens
+and adjacent token pairs. It is intentionally a reproducible fallback rather than
+a substitute for a neural semantic model. Hosted and neural local providers can
+implement the same adapter without changing ingestion or persistence.
+
+The hosted path uses OpenAI `text-embedding-3-small` through the Embeddings API
+with an explicit `dimensions=384`, preserving the shared pgvector schema. It is
+opt-in with `EMBEDDING_PROVIDER=openai` and requires `OPENAI_API_KEY`. Responses
+are restored to provider index order and rejected on missing, duplicate,
+non-numeric, or incorrectly sized vectors. Network failures, rate limits, and
+server errors use the same bounded provider retry path as hosted enrichment.
+
+## Subsystem Candidate Discovery
+
+The `discover_subsystem_candidates` ingestion stage reads snapshot source and
+test files after embeddings are complete. Candidate pairs can be supported by
+five deterministic signals:
+
+- exact parent directory;
+- import-community membership;
+- shared filename tokens;
+- co-change relationships from pull requests and commits;
+- active-space source-summary embedding similarity.
+
+A pair must have at least two agreeing signals before it contributes to a
+cluster. Connected candidate pairs become snapshot-scoped `SUBSYSTEM` nodes with
+`knowledge_kind=inferred`, a confidence score, and `status=candidate`. Files link
+to candidates through inferred `PART_OF_SUBSYSTEM` edges. Every member also adds
+metric evidence targeting the candidate node, including the supporting signals
+and membership edge ID.
+
+Candidate identity hashes the sorted member file keys, making retries
+idempotent. Rebuilding prunes stale candidates from the same algorithm and relies
+on graph foreign keys to remove their obsolete memberships and evidence. The
+deterministic name is only a temporary label; an LLM may later name and summarize
+the cluster but cannot confirm it without verified evidence.
+
+## Subsystem Enrichment and Verification
+
+The optional `enrich_subsystem_candidates` stage exposes a provider-neutral,
+structured naming and summarization boundary. Providers receive only the
+candidate's member paths, deterministic signals, and persisted evidence. Their
+output must include a bounded name, bounded summary, and persisted evidence IDs.
+
+The deterministic verifier rejects empty, oversized, or foreign citations. It
+never allows a model to raise structural confidence. A candidate becomes
+`confirmed` only when its pre-model confidence is at least `0.80`, citations
+cover at least two distinct member files, and citation coverage reaches 50%.
+Otherwise a valid enrichment remains explicitly labeled `candidate`.
+
+Accepted output updates the existing subsystem node and adds separate
+`MODEL_INFERENCE` evidence containing provider, model, prompt, verifier, cited
+evidence, coverage, and limitations. Existing file-level non-model evidence
+remains the basis for confirmation. This verifier establishes citation identity
+and coverage; semantic entailment evaluation remains a later quality gate.
+
+The worker can configure an OpenAI Responses API adapter for this boundary. It
+requests a strict JSON schema, disables response storage, separates instructions
+from untrusted repository evidence, and rejects incomplete, refused, or invalid
+structured output. Transient network failures, rate limits, and server errors use
+bounded retries; an exhausted transient failure keeps the ingestion job pending
+under the provider-neutral worker retry path.
+
+Hosted enrichment is disabled by default, so local development and CI make no
+model calls and leave deterministic candidates unchanged. To opt in, set
+`OPENAI_API_KEY` and `OPENAI_SUBSYSTEM_ENRICHMENT_ENABLED=true`. The default model
+is `gpt-5.6-sol` and can be changed with `OPENAI_SUBSYSTEM_MODEL`.
+
+## Architecture Facts and Subsystem Graph
+
+The `generate_subsystem_graph` stage collapses deterministic file-to-file import
+edges across subsystem memberships into directed, derived `DEPENDS_ON` edges.
+Each dependency preserves the supporting import-edge IDs and graph-path
+evidence. Internal imports are ignored, direction is retained, candidates stay
+labeled as candidates, and stale derived edges are pruned on rebuild.
+
+The `generate_architecture_summary` stage persists one snapshot-scoped,
+idempotent `ARCHITECTURE_SUMMARY` node. Entry-point candidates are scored from
+explicit `package.json` or `pyproject.toml` declarations, Python main guards,
+Node executable shebangs, main declarations, and conservative framework filename
+conventions. A candidate must reach the configured threshold and is described as
+likely rather than observed runtime behavior.
+
+Major external dependencies are ranked by distinct importing files and exclude
+standard-library nodes. Only confirmed subsystems become architecture
+components. Entry points, dependencies, and confirmed subsystems link back to
+the summary through derived edges with source-span, graph-path, or metric
+evidence. The summary records central files and explicit limitations and never
+claims services, deployment boundaries, or runtime calls from imports alone.
+
+## Software Atlas UX
+
+The repository Software Atlas adds Overview, Architecture, Subsystems,
+subsystem-detail, and Timeline routes. The Overview is useful before Ask and
+surfaces the generated summary, entry points, confirmed subsystem count,
+dependencies, and recent activity. Architecture provides a bounded Cytoscape
+graph plus a non-visual dependency list. Subsystem views keep low-confidence
+clusters visibly labeled as candidates.
+
+An evidence drawer reads the bounded graph evidence endpoint and shows evidence
+type, excerpt, source line range, confidence, and source URL. All inferred or
+derived UI elements display confidence labels. Every screen includes loading,
+error, empty, partial, and truncated-data messaging where applicable.
 
 ## Verification
 
@@ -127,6 +235,28 @@ provider metadata, idempotency, body changes, and removed artifacts.
 Source-summary integration tests cover real Python parsing, internal and
 external import resolution, graph metrics, fixed-snapshot links, source graph
 nodes, source-family filtering, and idempotent writes.
+Embedding unit tests cover deterministic vectors, lexical similarity, batch
+persistence, invalid provider responses, hosted request dimensions, provider
+ordering, retries, and malformed hosted vectors.
+Subsystem tests cover multi-signal clustering, cross-directory co-change plus
+embedding support, inferred membership persistence, evidence, idempotency, and
+stale-candidate pruning.
+Enrichment tests cover confirmation thresholds, foreign-citation rejection,
+confidence preservation, model-evidence persistence, PostgreSQL candidate reads,
+and the no-provider fallback. OpenAI adapter tests cover strict request schemas,
+prompt isolation, structured-output parsing, refusals, transient retry behavior,
+authentication failures, and opt-in configuration validation without making live
+API calls.
+Architecture and subsystem-graph tests cover manifest and executable entry-point
+signals, standard-library exclusion, directed cross-subsystem imports,
+evidence-backed persistence, idempotency, and stale-edge pruning. Graph API tests
+cover bounded evidence responses used by the drawer. The frontend production
+build, TypeScript compiler, formatter, and linter verify all Atlas routes.
+
+## Next Slice
+
+Week 5 begins decision evidence chains, contributor scoring, hybrid retrieval,
+and citation-aware Ask workflows.
 
 ```bash
 cd backend

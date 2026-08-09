@@ -120,7 +120,7 @@ export function RepositoryPage() {
               {latestVersion ? (
                 <Link
                   className="repository-graph-entry"
-                  to={`/repositories/${repositoryQuery.data.id}/graph`}
+                  to={`/repositories/${repositoryQuery.data.id}/overview`}
                 >
                   <span
                     className="repository-graph-entry__icon"
@@ -129,15 +129,15 @@ export function RepositoryPage() {
                     <Network size={22} />
                   </span>
                   <span className="repository-graph-entry__copy">
-                    <small>Architecture explorer</small>
-                    <strong>Open the repository graph</strong>
+                    <small>Software Atlas</small>
+                    <strong>Understand this repository</strong>
                     <span>
                       Browse structure, imports, provenance, and graph metrics
                       for commit {latestVersion.commit_sha.slice(0, 8)}.
                     </span>
                   </span>
                   <span className="repository-graph-entry__action">
-                    Explore graph
+                    Open Atlas
                     <ArrowRight size={17} aria-hidden="true" />
                   </span>
                 </Link>
