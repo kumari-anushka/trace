@@ -229,6 +229,39 @@ Store:
 - retrieval config
 - random seed
 
+## Executable development benchmark
+
+The repository includes a versioned dataset at
+`evaluation/datasets/trace-dev-v1.json` and an executable evaluator at
+`backend/scripts/evaluate_retrieval.py`. It runs keyword, vector, graph, and adaptive hybrid
+retrieval against the same fixed snapshot and computes Precision@k, Recall@k, Hit Rate@k, MRR,
+and nDCG@k with stable evidence keys.
+
+After ingesting the dataset snapshot, run:
+
+```bash
+make evaluate
+```
+
+The checked-in machine-readable report is `evaluation/results/trace-dev-v1.json`. The accompanying
+portfolio chart is `evaluation/results/trace-dev-v1.svg`.
+
+### Development result
+
+Dataset: 8 curated questions on `kumari-anushka/trace` at
+`649cef10efb621be705ba10b4a061a474ca1d94b`, using local feature-hashing embeddings and `k=10`.
+
+| Strategy | Recall@10 | Hit Rate@10 | MRR | nDCG@10 |
+|---|---:|---:|---:|---:|
+| Keyword | 0.208 | 0.500 | 0.130 | 0.115 |
+| Vector | 0.188 | 0.250 | 0.094 | 0.112 |
+| Graph | 0.313 | 0.750 | 0.308 | 0.218 |
+| Adaptive hybrid | **0.542** | **0.875** | **0.346** | **0.360** |
+
+This is a development benchmark, not evidence of generalization. It uses one repository, a small
+author-curated set, and lexical local embeddings. The result supports continued evaluation of the
+hybrid design but does not satisfy the broader research target or justify causal claims.
+
 ## Reporting
 
 Each experiment report includes:

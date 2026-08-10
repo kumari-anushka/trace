@@ -32,6 +32,7 @@ from src.ingestion.processor import (
     FILESYSTEM_GRAPH_STAGE_NAME,
     GRAPH_ANALYSIS_STAGE_NAME,
     HISTORICAL_GRAPH_STAGE_NAME,
+    HISTORICAL_INTELLIGENCE_STAGE_NAME,
     ISSUES_STAGE_NAME,
     JAVASCRIPT_GRAPH_STAGE_NAME,
     METADATA_STAGE_NAME,
@@ -47,6 +48,10 @@ from src.ingestion.processor import (
     GitHubIngestionProcessor,
 )
 from src.ingestion.service import IngestionService, IngestionStageService
+from src.intelligence.historical import (
+    HistoricalIntelligenceBuilder,
+    HistoricalIntelligenceSummary,
+)
 from src.repositories.models import Repository
 from src.repositories.service import RepositoryService
 from src.repository_versions.models import RepositoryVersion
@@ -71,6 +76,7 @@ def empty_snapshot_archive() -> bytes:
 
 
 def graph_builder_mocks() -> tuple[
+    AsyncMock,
     AsyncMock,
     AsyncMock,
     AsyncMock,
@@ -224,6 +230,15 @@ def graph_builder_mocks() -> tuple[
         evidence=0,
         stale_dependencies=0,
     )
+    historical_intelligence_builder = AsyncMock(spec=HistoricalIntelligenceBuilder)
+    historical_intelligence_builder.build.return_value = HistoricalIntelligenceSummary(
+        decisions=0,
+        confirmed_decisions=0,
+        insufficient_evidence_decisions=0,
+        decision_evidence=0,
+        contributor_scores=0,
+        stale_decisions=0,
+    )
     return (
         filesystem_builder,
         python_builder,
@@ -238,6 +253,7 @@ def graph_builder_mocks() -> tuple[
         subsystem_enrichment_builder,
         subsystem_graph_builder,
         architecture_builder,
+        historical_intelligence_builder,
     )
 
 
@@ -288,6 +304,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
             SUBSYSTEM_ENRICHMENT_STAGE_NAME,
             SUBSYSTEM_GRAPH_STAGE_NAME,
             ARCHITECTURE_STAGE_NAME,
+            HISTORICAL_INTELLIGENCE_STAGE_NAME,
         )
     ):
         stage = IngestionStage(
@@ -323,6 +340,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         subsystem_enrichment_builder,
         subsystem_graph_builder,
         architecture_builder,
+        historical_intelligence_builder,
     ) = graph_builder_mocks()
 
     stage_service.list_stages.return_value = []
@@ -407,6 +425,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         subsystem_enrichment_builder=subsystem_enrichment_builder,
         subsystem_graph_builder=subsystem_graph_builder,
         architecture_builder=architecture_builder,
+        historical_intelligence_builder=historical_intelligence_builder,
         limits=GitHubIngestionLimits(),
     )
 
@@ -438,6 +457,7 @@ async def test_processor_anchors_every_snapshot_call_to_submission_sha() -> None
         subsystem_enrichment_builder,
         subsystem_graph_builder,
         architecture_builder,
+        historical_intelligence_builder,
     ):
         builder.build.assert_awaited_once_with(
             repository_id=repository.id,
@@ -490,6 +510,7 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         SUBSYSTEM_ENRICHMENT_STAGE_NAME,
         SUBSYSTEM_GRAPH_STAGE_NAME,
         ARCHITECTURE_STAGE_NAME,
+        HISTORICAL_INTELLIGENCE_STAGE_NAME,
     )
     stages = []
     for position, name in enumerate(stage_names):
@@ -555,6 +576,7 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         subsystem_enrichment_builder,
         subsystem_graph_builder,
         architecture_builder,
+        historical_intelligence_builder,
     ) = graph_builder_mocks()
     stage_service.list_stages.return_value = stages
     version_service.get_repository_version.return_value = version
@@ -610,6 +632,7 @@ async def test_pull_request_checkpoint_skips_already_persisted_items() -> None:
         subsystem_enrichment_builder=subsystem_enrichment_builder,
         subsystem_graph_builder=subsystem_graph_builder,
         architecture_builder=architecture_builder,
+        historical_intelligence_builder=historical_intelligence_builder,
         limits=GitHubIngestionLimits(),
     )
 

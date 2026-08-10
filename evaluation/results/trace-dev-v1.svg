@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 390" role="img" aria-labelledby="title description">
+<title id="title">Trace retrieval benchmark</title>
+<desc id="description">Development benchmark comparing Recall at 10 and mean reciprocal rank for keyword, vector, graph, and hybrid retrieval.</desc>
+<style>text{font-family:ui-sans-serif,system-ui,sans-serif;fill:#d8dee9}.title{font-size:20px;font-weight:600}.subtitle,.tick{font-size:11px;fill:#8792a2}.grid{stroke:#273244;stroke-width:1}.value{font-size:10px;text-anchor:middle}.strategy{font-size:12px;text-anchor:middle}.legend{font-size:11px}</style>
+<rect width="760" height="390" rx="16" fill="#0b1018"/>
+<text x="32" y="36" class="title">Retrieval quality — development benchmark</text>
+<text x="32" y="57" class="subtitle">trace-development-retrieval · 8 questions · k=10</text>
+<line x1="72" y1="314.0" x2="722" y2="314.0" class="grid"/><text x="60" y="318.0" class="tick">0.0</text>
+<line x1="72" y1="234.7" x2="722" y2="234.7" class="grid"/><text x="60" y="238.7" class="tick">0.2</text>
+<line x1="72" y1="155.3" x2="722" y2="155.3" class="grid"/><text x="60" y="159.3" class="tick">0.4</text>
+<line x1="72" y1="76.0" x2="722" y2="76.0" class="grid"/><text x="60" y="80.0" class="tick">0.6</text>
+<rect x="115.2" y="231.4" width="34" height="82.6" rx="4" fill="#5de4c7"><title>keyword Recall@10: 0.208</title></rect>
+<rect x="157.2" y="262.3" width="34" height="51.7" rx="4" fill="#7aa2f7"><title>keyword MRR: 0.130</title></rect>
+<rect x="277.8" y="239.6" width="34" height="74.4" rx="4" fill="#5de4c7"><title>vector Recall@10: 0.188</title></rect>
+<rect x="319.8" y="276.8" width="34" height="37.2" rx="4" fill="#7aa2f7"><title>vector MRR: 0.094</title></rect>
+<rect x="440.2" y="190.0" width="34" height="124.0" rx="4" fill="#5de4c7"><title>graph Recall@10: 0.312</title></rect>
+<rect x="482.2" y="192.0" width="34" height="122.0" rx="4" fill="#7aa2f7"><title>graph MRR: 0.308</title></rect>
+<rect x="602.8" y="99.1" width="34" height="214.9" rx="4" fill="#5de4c7"><title>hybrid Recall@10: 0.542</title></rect>
+<rect x="644.8" y="176.8" width="34" height="137.2" rx="4" fill="#7aa2f7"><title>hybrid MRR: 0.346</title></rect>
+<text x="132.2" y="224.4" class="value">0.208</text>
+<text x="174.2" y="255.3" class="value">0.130</text>
+<text x="153.2" y="342" class="strategy">Keyword</text>
+<text x="294.8" y="232.6" class="value">0.188</text>
+<text x="336.8" y="269.8" class="value">0.094</text>
+<text x="315.8" y="342" class="strategy">Vector</text>
+<text x="457.2" y="183.0" class="value">0.312</text>
+<text x="499.2" y="185.0" class="value">0.308</text>
+<text x="478.2" y="342" class="strategy">Graph</text>
+<text x="619.8" y="92.1" class="value">0.542</text>
+<text x="661.8" y="169.8" class="value">0.346</text>
+<text x="640.8" y="342" class="strategy">Hybrid</text>
+<rect x="540" y="30" width="10" height="10" rx="2" fill="#5de4c7"/><text x="556" y="39" class="legend">Recall@10</text><rect x="635" y="30" width="10" height="10" rx="2" fill="#7aa2f7"/><text x="651" y="39" class="legend">MRR</text>
+</svg>

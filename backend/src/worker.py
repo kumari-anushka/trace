@@ -25,6 +25,10 @@ from src.ingestion.queue import RedisIngestionConsumer
 from src.ingestion.runner import IngestionWorker
 from src.ingestion.service import IngestionService, IngestionStageService
 from src.ingestion.store import IngestionJobStore, IngestionStageStore
+from src.intelligence.historical import (
+    HistoricalIntelligenceBuilder,
+    PostgresHistoricalIntelligenceStore,
+)
 from src.repositories.service import RepositoryService
 from src.repositories.store import RepositoryStore
 from src.repository_versions.service import RepositoryVersionService
@@ -77,6 +81,7 @@ async def run_worker() -> None:
             subsystem_enrichment_reader = PostgresSubsystemEnrichmentReader(session=session)
             architecture_store = PostgresArchitectureStore(session=session)
             subsystem_graph_store = PostgresSubsystemGraphStore(session=session)
+            historical_intelligence_store = PostgresHistoricalIntelligenceStore(session=session)
             subsystem_enrichment_provider = (
                 OpenAISubsystemEnrichmentProvider(
                     http_client=openai_http_client,
@@ -172,6 +177,11 @@ async def run_worker() -> None:
                     graph_repository=graph_repository,
                     reader=architecture_store,
                     store=architecture_store,
+                ),
+                historical_intelligence_builder=HistoricalIntelligenceBuilder(
+                    graph_repository=graph_repository,
+                    reader=historical_intelligence_store,
+                    store=historical_intelligence_store,
                 ),
                 limits=GitHubIngestionLimits(
                     labels=settings.github_label_limit,

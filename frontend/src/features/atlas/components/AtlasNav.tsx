@@ -1,4 +1,12 @@
-import { Boxes, Clock3, LayoutDashboard, Network } from "lucide-react";
+import {
+  Boxes,
+  Clock3,
+  LayoutDashboard,
+  Lightbulb,
+  MessageCircleQuestion,
+  Network,
+  Users,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 type AtlasNavProps = { repositoryId: string };
@@ -8,6 +16,10 @@ export function AtlasNav({ repositoryId }: AtlasNavProps) {
     ["overview", "Overview", LayoutDashboard],
     ["architecture", "Architecture", Network],
     ["subsystems", "Subsystems", Boxes],
+    ["decisions", "Decisions", Lightbulb],
+    ["contributors", "Contributors", Users],
+    ["ask", "Ask", MessageCircleQuestion],
+    ["graph", "Explore", Network],
     ["timeline", "Timeline", Clock3],
   ] as const;
 

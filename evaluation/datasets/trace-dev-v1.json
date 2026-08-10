@@ -1,0 +1,106 @@
+{
+  "name": "trace-development-retrieval",
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "trace-ingestion-architecture",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "How is GitHub ingestion organized?",
+      "category": "architecture",
+      "difficulty": "easy",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/week-2-ingestion.md:Week 2 — GitHub Ingestion:0",
+        "doc:repository_documentation:docs/architecture.md:Worker:1",
+        "node:commit:0aaa794 snapshot & job ingestion model created"
+      ]
+    },
+    {
+      "id": "trace-ingestion-stages",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "Which stages run during repository ingestion?",
+      "category": "historical",
+      "difficulty": "easy",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/week-2-ingestion.md:Worker Stages:1",
+        "doc:repository_documentation:docs/week-3-graph.md:Ingestion Stages:5",
+        "node:directory:ingestion",
+        "node:file:runner.py"
+      ]
+    },
+    {
+      "id": "trace-graph-analysis",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "How are graph metrics computed?",
+      "category": "architecture",
+      "difficulty": "medium",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/architecture.md:Graph Analysis:3",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "node:file:analysis.py"
+      ]
+    },
+    {
+      "id": "trace-embedding-space",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "How are embedding spaces versioned and activated?",
+      "category": "dependency",
+      "difficulty": "medium",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/week-4-semantic.md:Embedding Spaces:1",
+        "node:symbol:Embedding"
+      ]
+    },
+    {
+      "id": "trace-document-chunking",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "How is repository documentation chunked?",
+      "category": "subsystem",
+      "difficulty": "easy",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/week-4-semantic.md:Repository Documentation Chunking:2"
+      ]
+    },
+    {
+      "id": "trace-contributor-guardrail",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "Why does contributor activity not imply ownership?",
+      "category": "contributor",
+      "difficulty": "medium",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/ontology.md:Contributor Rules:4",
+        "doc:repository_documentation:docs/ai-system.md:Contributor Intelligence:3"
+      ]
+    },
+    {
+      "id": "trace-api-ingestion-progress",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "Which API endpoint returns ingestion progress?",
+      "category": "file",
+      "difficulty": "easy",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5",
+        "node:file:repositories.api.ts"
+      ]
+    },
+    {
+      "id": "trace-ask-verification",
+      "repository": "kumari-anushka/trace",
+      "snapshot_sha": "649cef10efb621be705ba10b4a061a474ca1d94b",
+      "question": "What evidence rules apply to generated answers?",
+      "category": "mixed",
+      "difficulty": "medium",
+      "gold_evidence": [
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/ux.md:Ask:4",
+        "node:symbol:EvidenceType"
+      ]
+    }
+  ]
+}

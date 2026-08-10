@@ -7,6 +7,7 @@ import { RepositoryIngestionPage } from "../pages/RepositoryIngestionPage";
 import { RepositoryPage } from "../pages/RepositoryPage";
 import { LazyRepositoryGraphPage } from "./LazyRepositoryGraphPage";
 import { LazyAtlasPage } from "./LazyAtlasPage";
+import { LazyAskPage } from "./LazyAskPage";
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,18 @@ export const router = createBrowserRouter([
       {
         path: "/repositories/:repositoryId/timeline",
         element: <LazyAtlasPage view="timeline" />,
+      },
+      {
+        path: "/repositories/:repositoryId/decisions",
+        element: <LazyAtlasPage view="decisions" />,
+      },
+      {
+        path: "/repositories/:repositoryId/contributors",
+        element: <LazyAtlasPage view="contributors" />,
+      },
+      {
+        path: "/repositories/:repositoryId/ask",
+        element: <LazyAskPage />,
       },
       {
         path: "*",

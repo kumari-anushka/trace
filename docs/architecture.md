@@ -4,18 +4,17 @@
 
 MVP uses a modular monolith plus background worker.
 
-```text
-React Frontend
-    ↓
-FastAPI API
-    ↓
-PostgreSQL + pgvector
-    ↕
-Redis Queue
-    ↓
-Worker
-    ↓
-GitHub + Model Providers
+```mermaid
+flowchart LR
+    Browser["Browser"] --> Frontend["React frontend"]
+    Frontend --> API["FastAPI API"]
+    API --> Database["PostgreSQL + pgvector"]
+    API --> Queue["Redis queue"]
+    Queue --> Worker["Background worker"]
+    Worker --> Database
+    Worker --> GitHub["GitHub API"]
+    Worker --> Models["Optional model providers"]
+    API --> Models
 ```
 
 ## Goals

@@ -28,11 +28,13 @@ from src.core.exceptions import (
     InvalidIngestionProgressError,
     InvalidIngestionStageProgressError,
     InvalidIngestionStageTransitionError,
+    OpenAIAPIError,
     PrivateGitHubRepositoryError,
     RepositoryAlreadyExistsError,
     RepositoryNotFoundError,
     RepositoryVersionAlreadyExistsError,
     RepositoryVersionNotFoundError,
+    RetryableOpenAIAPIError,
     TraceError,
 )
 
@@ -45,6 +47,8 @@ ERROR_STATUS_CODES: dict[type[TraceError], int] = {
     GitHubRepositoryNotFoundError: HTTP_404_NOT_FOUND,
     PrivateGitHubRepositoryError: HTTP_422_UNPROCESSABLE_CONTENT,
     GitHubAPIError: HTTP_502_BAD_GATEWAY,
+    OpenAIAPIError: HTTP_502_BAD_GATEWAY,
+    RetryableOpenAIAPIError: HTTP_503_SERVICE_UNAVAILABLE,
     RepositoryAlreadyExistsError: HTTP_409_CONFLICT,
     RepositoryNotFoundError: HTTP_404_NOT_FOUND,
     RepositoryVersionAlreadyExistsError: HTTP_409_CONFLICT,

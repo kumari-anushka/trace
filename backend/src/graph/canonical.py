@@ -48,6 +48,15 @@ def architecture_summary_key(repository_id: UUID, repository_version_id: UUID) -
     return f"{snapshot_key(repository_id, repository_version_id)}:architecture_summary"
 
 
+def decision_key(
+    repository_id: UUID,
+    repository_version_id: UUID,
+    source_canonical_key: str,
+) -> str:
+    digest = sha256(source_canonical_key.encode()).hexdigest()
+    return f"{snapshot_key(repository_id, repository_version_id)}:decision:{digest}"
+
+
 def person_key(github_user_id: int) -> str:
     return f"github:person:{github_user_id}"
 

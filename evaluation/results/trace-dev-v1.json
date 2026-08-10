@@ -1,0 +1,767 @@
+{
+  "cases": [
+    {
+      "case_id": "trace-ingestion-architecture",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/api.md:Health:2",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/api.md:Delete a repository:4",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5",
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Get bounded node neighbors:7",
+        "doc:repository_documentation:docs/architecture.md:Trace \u2014 Architecture:0"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-ingestion-architecture",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/week-2-ingestion.md:Verification:4",
+        "doc:source_summary:frontend/src/lib/api-client.ts:Source summary: api-client.ts:0",
+        "doc:repository_documentation:docs/overview.md:Trace \u2014 Overview:0",
+        "doc:repository_documentation:docs/week-3-graph.md:Ingestion Stages:5",
+        "doc:repository_documentation:docs/week-2-ingestion.md:Idempotency:2",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/roadmap.md:Trace \u2014 Roadmap:0",
+        "doc:repository_documentation:README.md:Trace:0",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/week-3-graph.md:Next Slice:7"
+      ],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-ingestion-architecture",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.46927872602275644,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.3333333333333333,
+        "reciprocal_rank": 1.0
+      },
+      "retrieved": [
+        "node:commit:0aaa794 snapshot & job ingestion model created",
+        "node:commit:260127d ingestion module setup",
+        "node:commit:bf90b02 api tests added",
+        "node:person:kumari-anushka",
+        "node:commit:19ab977 fixed github client code rep",
+        "node:file:.env.example",
+        "node:file:config.py",
+        "node:file:exceptions.py",
+        "node:commit:31f8d7f readme and gitignore added",
+        "node:commit:40dbd58 license updated"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-ingestion-architecture",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.1480409554829326,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.3333333333333333,
+        "reciprocal_rank": 0.125
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/roadmap.md:Trace \u2014 Roadmap:0",
+        "doc:repository_documentation:README.md:Trace:0",
+        "doc:repository_documentation:docs/architecture.md:Trace \u2014 Architecture:0",
+        "node:commit:0aaa794 snapshot & job ingestion model created",
+        "node:commit:260127d ingestion module setup",
+        "doc:repository_documentation:docs/overview.md:Trace \u2014 Overview:0"
+      ],
+      "strategy": "hybrid"
+    },
+    {
+      "case_id": "trace-ingestion-stages",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Architecture Synthesis:2",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/api.md:Health:2",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/api.md:Delete a repository:4",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-ingestion-stages",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:source_summary:frontend/src/features/repositories/repositories.types.ts:Source summary: repositories.types.ts:0",
+        "doc:repository_documentation:docs/week-2-ingestion.md:Idempotency:2",
+        "doc:repository_documentation:docs/database.md:Search:4",
+        "doc:repository_documentation:docs/ux.md:Trace \u2014 UX:0",
+        "doc:source_summary:frontend/src/features/graph/graph.types.ts:Source summary: graph.types.ts:0",
+        "doc:repository_documentation:docs/week-2-ingestion.md:Verification:4",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5",
+        "doc:pull_request:pull_request:3:#3 default_branch made not null:0"
+      ],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-ingestion-stages",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.3638184934971571,
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.5
+      },
+      "retrieved": [
+        "node:directory:src",
+        "node:directory:ingestion",
+        "node:file:__init__.py",
+        "node:file:dependencies.py",
+        "node:file:models.py",
+        "node:file:processor.py",
+        "node:file:queue.py",
+        "node:file:router.py",
+        "node:file:runner.py",
+        "node:file:schemas.py"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-ingestion-stages",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/api.md:Delete a repository:4",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:source_summary:frontend/src/features/repositories/repositories.types.ts:Source summary: repositories.types.ts:0",
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/database.md:Search:4",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/ai-system.md:Architecture Synthesis:2"
+      ],
+      "strategy": "hybrid"
+    },
+    {
+      "case_id": "trace-graph-analysis",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.2960819109658652,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.3333333333333333,
+        "reciprocal_rank": 0.5
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "doc:repository_documentation:docs/ai-system.md:Contributor Intelligence:3",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "doc:repository_documentation:docs/ai-system.md:Baselines:6",
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Get bounded node neighbors:7",
+        "doc:repository_documentation:docs/architecture.md:Trace \u2014 Architecture:0",
+        "doc:repository_documentation:docs/architecture.md:Worker:1"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-graph-analysis",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/week-3-graph.md:Week 3 \u2014 Repository Ontology and Deterministic Graph:0",
+        "doc:repository_documentation:docs/evaluation.md:Graph Metrics:2",
+        "doc:pull_request:pull_request:3:#3 default_branch made not null:0",
+        "doc:repository_documentation:docs/week-4-semantic.md:Infrastructure:5",
+        "doc:repository_documentation:docs/api.md:Planned endpoints:8",
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Get bounded node neighbors:7",
+        "doc:repository_documentation:docs/database.md:Graph Node Identity:2",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5",
+        "doc:source_summary:frontend/src/features/repositories/components/RepositorySkeleton.tsx:Source summary: RepositorySkeleton.tsx:0"
+      ],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-graph-analysis",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.13565197343244778,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.3333333333333333,
+        "reciprocal_rank": 0.1
+      },
+      "retrieved": [
+        "node:directory:features",
+        "node:directory:graph",
+        "node:directory:api",
+        "node:directory:components",
+        "node:directory:hooks",
+        "node:file:graph.types.ts",
+        "node:directory:src",
+        "node:directory:graph",
+        "node:file:__init__.py",
+        "node:file:analysis.py"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-graph-analysis",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.20210734650054757,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.3333333333333333,
+        "reciprocal_rank": 0.25
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Get bounded node neighbors:7",
+        "doc:repository_documentation:docs/week-3-graph.md:Week 3 \u2014 Repository Ontology and Deterministic Graph:0",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "doc:repository_documentation:docs/evaluation.md:Graph Metrics:2",
+        "doc:repository_documentation:docs/week-4-semantic.md:Infrastructure:5",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "node:directory:graph",
+        "doc:repository_documentation:docs/ai-system.md:Contributor Intelligence:3",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4"
+      ],
+      "strategy": "hybrid"
+    },
+    {
+      "case_id": "trace-embedding-space",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "doc:repository_documentation:docs/architecture.md:Worker:1",
+        "doc:repository_documentation:docs/architecture.md:Main Pipeline:2",
+        "doc:repository_documentation:docs/architecture.md:Graph Analysis:3",
+        "doc:repository_documentation:docs/architecture.md:Build Atlas:4",
+        "doc:repository_documentation:docs/database.md:Semantic:1",
+        "doc:repository_documentation:docs/database.md:Graph Node Identity:2",
+        "doc:repository_documentation:docs/database.md:Evidence:3"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-embedding-space",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.2640681225725909,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.25
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/week-4-semantic.md:Deterministic Source Summaries:4",
+        "doc:repository_documentation:docs/week-2-ingestion.md:File Classification:3",
+        "doc:repository_documentation:docs/week-4-semantic.md:Infrastructure:5",
+        "doc:repository_documentation:docs/week-4-semantic.md:Embedding Spaces:1",
+        "doc:repository_documentation:docs/week-4-semantic.md:Repository Documentation Chunking:2",
+        "doc:repository_documentation:docs/overview.md:Documentation Map:3",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/week-3-graph.md:TypeScript and JavaScript Graph:3",
+        "doc:repository_documentation:docs/week-3-graph.md:Next Slice:7",
+        "doc:repository_documentation:docs/week-3-graph.md:Graph Explorer:6"
+      ],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-embedding-space",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.38685280723454163,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.5
+      },
+      "retrieved": [
+        "node:file:models.py",
+        "node:symbol:Embedding",
+        "node:file:repository.py",
+        "node:symbol:EmbeddingInput",
+        "node:file:test_semantic_persistence.py",
+        "node:symbol:test_semantic_persistence_is_idempotent_and_filters_stale_embeddings",
+        "node:symbol:upsert_embedding"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-embedding-space",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.5912352048230277,
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 0.5
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/database.md:Evidence:3",
+        "doc:repository_documentation:docs/week-4-semantic.md:Embedding Spaces:1",
+        "doc:repository_documentation:docs/database.md:Semantic:1",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/week-4-semantic.md:Deterministic Source Summaries:4",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "node:symbol:Embedding",
+        "doc:repository_documentation:docs/week-4-semantic.md:Infrastructure:5",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "doc:repository_documentation:docs/architecture.md:Worker:1"
+      ],
+      "strategy": "hybrid"
+    },
+    {
+      "case_id": "trace-document-chunking",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/api.md:Health:2",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/api.md:Delete a repository:4",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-document-chunking",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.6309297535714575,
+        "precision_at_k": 0.1,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 0.5
+      },
+      "retrieved": [
+        "doc:source_summary:frontend/src/features/repositories/repositories.types.ts:Source summary: repositories.types.ts:0",
+        "doc:repository_documentation:docs/week-4-semantic.md:Repository Documentation Chunking:2",
+        "doc:repository_documentation:docs/week-2-ingestion.md:File Classification:3",
+        "doc:repository_documentation:docs/week-2-ingestion.md:Idempotency:2",
+        "doc:repository_documentation:docs/overview.md:Trace \u2014 Overview:0",
+        "doc:source_summary:frontend/src/features/graph/graph.types.ts:Source summary: graph.types.ts:0",
+        "doc:repository_documentation:docs/ux.md:Trace \u2014 UX:0",
+        "doc:repository_documentation:docs/database.md:Semantic:1",
+        "doc:repository_documentation:docs/product.md:Trace \u2014 Product Requirements:0",
+        "doc:repository_documentation:docs/ux.md:Responsive:5"
+      ],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-document-chunking",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "node:commit:649cef1 Merge pull request #6 from kumari-anushka/week-3",
+        "node:commit:a9fa680 feat: add deterministic graph and semantic ingestion pipeline",
+        "node:pull_request:#6 Week 3",
+        "node:directory:integration",
+        "node:external_dependency:hashlib",
+        "node:external_dependency:pytest",
+        "node:external_dependency:sqlalchemy",
+        "node:external_dependency:uuid",
+        "node:file:session.py",
+        "node:file:models.py"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-document-chunking",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 1.0,
+        "precision_at_k": 0.1,
+        "recall_at_k": 1.0,
+        "reciprocal_rank": 1.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/week-4-semantic.md:Repository Documentation Chunking:2",
+        "doc:repository_documentation:docs/week-2-ingestion.md:File Classification:3",
+        "doc:source_summary:frontend/src/features/repositories/repositories.types.ts:Source summary: repositories.types.ts:0",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/week-2-ingestion.md:Idempotency:2",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/overview.md:Trace \u2014 Overview:0"
+      ],
+      "strategy": "hybrid"
+    },
+    {
+      "case_id": "trace-contributor-guardrail",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.23719771276929622,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.2
+      },
+      "retrieved": [
+        "doc:pull_request:pull_request:3:#3 default_branch made not null:0",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "doc:repository_documentation:docs/ai-system.md:Architecture Synthesis:2",
+        "doc:repository_documentation:docs/ai-system.md:Contributor Intelligence:3",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-contributor-guardrail",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-contributor-guardrail",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "node:file:exceptions.py",
+        "node:symbol:RepositoryNotFoundError",
+        "node:symbol:IngestionJobNotFoundError",
+        "node:symbol:GitHubRepositoryNotFoundError",
+        "node:symbol:IngestionStageNotFoundError"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-contributor-guardrail",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.38685280723454163,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.5
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Contributor Intelligence:3",
+        "doc:pull_request:pull_request:3:#3 default_branch made not null:0",
+        "node:symbol:RepositoryNotFoundError",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "node:symbol:IngestionJobNotFoundError",
+        "doc:repository_documentation:docs/ai-system.md:Architecture Synthesis:2",
+        "node:symbol:GitHubRepositoryNotFoundError",
+        "node:symbol:IngestionStageNotFoundError",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4"
+      ],
+      "strategy": "hybrid"
+    },
+    {
+      "case_id": "trace-api-ingestion-progress",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.20438239758848611,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.14285714285714285
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/api.md:Health:2",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/api.md:Delete a repository:4",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5",
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Get bounded node neighbors:7",
+        "doc:repository_documentation:docs/api.md:Planned endpoints:8"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-api-ingestion-progress",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/week-2-ingestion.md:Idempotency:2",
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:source_summary:frontend/src/main.tsx:Source summary: main.tsx:0",
+        "doc:repository_documentation:docs/architecture.md:Worker:1",
+        "doc:repository_documentation:README.md:Local Development:2",
+        "doc:repository_documentation:docs/roadmap.md:Trace \u2014 Roadmap:0",
+        "doc:repository_documentation:docs/week-2-ingestion.md:File Classification:3",
+        "doc:repository_documentation:docs/product.md:Trace \u2014 Product Requirements:0"
+      ],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-api-ingestion-progress",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.18457569677956817,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.1111111111111111
+      },
+      "retrieved": [
+        "node:directory:tests",
+        "node:directory:api",
+        "node:file:test_exception_handlers.py",
+        "node:directory:graph",
+        "node:directory:api",
+        "node:file:graph.api.ts",
+        "node:directory:repositories",
+        "node:directory:api",
+        "node:file:repositories.api.ts",
+        "node:directory:src"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-api-ingestion-progress",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.20438239758848611,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.5,
+        "reciprocal_rank": 0.14285714285714285
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/api.md:Get a repository version:6",
+        "doc:repository_documentation:docs/api.md:Import a public repository:3",
+        "doc:repository_documentation:docs/api.md:Error responses:1",
+        "doc:repository_documentation:docs/api.md:Trace API:0",
+        "doc:repository_documentation:docs/architecture.md:Worker:1",
+        "doc:repository_documentation:docs/api.md:Delete a repository:4",
+        "doc:repository_documentation:docs/api.md:Get repository ingestion progress:5",
+        "doc:repository_documentation:docs/roadmap.md:Trace \u2014 Roadmap:0",
+        "doc:repository_documentation:docs/api.md:Get bounded node neighbors:7",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0"
+      ],
+      "strategy": "hybrid"
+    },
+    {
+      "case_id": "trace-ask-verification",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.18154179253735267,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.3333333333333333,
+        "reciprocal_rank": 0.2
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "doc:repository_documentation:docs/ai-system.md:Architecture Synthesis:2",
+        "doc:repository_documentation:docs/ai-system.md:Contributor Intelligence:3",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "doc:repository_documentation:docs/ai-system.md:Baselines:6",
+        "doc:repository_documentation:docs/api.md:Planned endpoints:8",
+        "doc:repository_documentation:docs/architecture.md:Trace \u2014 Architecture:0",
+        "doc:repository_documentation:docs/architecture.md:Worker:1"
+      ],
+      "strategy": "keyword"
+    },
+    {
+      "case_id": "trace-ask-verification",
+      "metrics": {
+        "hit_rate_at_k": 0.0,
+        "ndcg_at_k": 0.0,
+        "precision_at_k": 0.0,
+        "recall_at_k": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/evaluation.md:Key Rule:5",
+        "doc:source_summary:backend/tests/integration/test_ingestion_flow.py:Source summary: test_ingestion_flow.py:1",
+        "doc:source_summary:backend/src/graph/python.py:Source summary: python.py:1",
+        "doc:source_summary:backend/src/graph/javascript.py:Source summary: javascript.py:1",
+        "doc:source_summary:backend/tests/repository_versions/test_router.py:Source summary: test_router.py:1",
+        "doc:source_summary:backend/tests/ingestion/test_queue.py:Source summary: test_queue.py:1",
+        "doc:source_summary:backend/src/worker.py:Source summary: worker.py:0",
+        "doc:source_summary:backend/src/repository_versions/dependencies.py:Source summary: dependencies.py:0",
+        "doc:source_summary:backend/src/ingestion/dependencies.py:Source summary: dependencies.py:0",
+        "doc:source_summary:backend/src/graph/analysis.py:Source summary: analysis.py:1"
+      ],
+      "strategy": "vector"
+    },
+    {
+      "case_id": "trace-ask-verification",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.20210734650054757,
+        "precision_at_k": 0.1,
+        "recall_at_k": 0.3333333333333333,
+        "reciprocal_rank": 0.25
+      },
+      "retrieved": [
+        "node:file:test_graph_persistence.py",
+        "node:symbol:test_filesystem_graph_persists_idempotently_with_evidence",
+        "node:file:models.py",
+        "node:symbol:EvidenceType",
+        "node:file:canonical.py",
+        "node:symbol:evidence_key",
+        "node:symbol:test_python_graph_persists_symbols_imports_and_source_evidence"
+      ],
+      "strategy": "graph"
+    },
+    {
+      "case_id": "trace-ask-verification",
+      "metrics": {
+        "hit_rate_at_k": 1.0,
+        "ndcg_at_k": 0.3501483019834802,
+        "precision_at_k": 0.2,
+        "recall_at_k": 0.6666666666666666,
+        "reciprocal_rank": 0.25
+      },
+      "retrieved": [
+        "doc:repository_documentation:docs/evaluation.md:Key Rule:5",
+        "doc:repository_documentation:docs/ai-system.md:Trace \u2014 AI System:0",
+        "doc:repository_documentation:docs/ai-system.md:Architecture Synthesis:2",
+        "doc:repository_documentation:docs/ai-system.md:Structured Answer:4",
+        "doc:repository_documentation:docs/ai-system.md:Graph Analysis:1",
+        "node:symbol:test_filesystem_graph_persists_idempotently_with_evidence",
+        "doc:repository_documentation:docs/ai-system.md:Contributor Intelligence:3",
+        "node:symbol:EvidenceType",
+        "doc:repository_documentation:docs/ai-system.md:Provider Interfaces:5",
+        "node:symbol:evidence_key"
+      ],
+      "strategy": "hybrid"
+    }
+  ],
+  "dataset": "trace-development-retrieval",
+  "dataset_version": "1.0.0",
+  "k": 10,
+  "strategies": [
+    {
+      "case_count": 8,
+      "metrics": {
+        "hit_rate_at_k": 0.5,
+        "ndcg_at_k": 0.11490047673262503,
+        "precision_at_k": 0.05,
+        "recall_at_k": 0.20833333333333331,
+        "reciprocal_rank": 0.13035714285714287
+      },
+      "strategy": "keyword"
+    },
+    {
+      "case_count": 8,
+      "metrics": {
+        "hit_rate_at_k": 0.25,
+        "ndcg_at_k": 0.11187473451800606,
+        "precision_at_k": 0.025,
+        "recall_at_k": 0.1875,
+        "reciprocal_rank": 0.09375
+      },
+      "strategy": "vector"
+    },
+    {
+      "case_count": 8,
+      "metrics": {
+        "hit_rate_at_k": 0.75,
+        "ndcg_at_k": 0.21778563043337734,
+        "precision_at_k": 0.08750000000000001,
+        "recall_at_k": 0.3125,
+        "reciprocal_rank": 0.3076388888888889
+      },
+      "strategy": "graph"
+    },
+    {
+      "case_count": 8,
+      "metrics": {
+        "hit_rate_at_k": 0.875,
+        "ndcg_at_k": 0.360345876701627,
+        "precision_at_k": 0.1125,
+        "recall_at_k": 0.5416666666666666,
+        "reciprocal_rank": 0.34598214285714285
+      },
+      "strategy": "hybrid"
+    }
+  ]
+}

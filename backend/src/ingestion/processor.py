@@ -17,6 +17,7 @@ from src.graph.python import PythonGraphBuilder
 from src.ingestion.models import IngestionJob, IngestionStage, IngestionStageStatus
 from src.ingestion.runner import MAX_ERROR_MESSAGE_LENGTH
 from src.ingestion.service import IngestionService, IngestionStageService
+from src.intelligence.historical import HistoricalIntelligenceBuilder
 from src.repositories.service import RepositoryService
 from src.repository_versions.service import RepositoryVersionService
 from src.semantic.architecture import ArchitectureBuilder
@@ -48,6 +49,7 @@ SUBSYSTEMS_STAGE_NAME = "discover_subsystem_candidates"
 SUBSYSTEM_ENRICHMENT_STAGE_NAME = "enrich_subsystem_candidates"
 SUBSYSTEM_GRAPH_STAGE_NAME = "generate_subsystem_graph"
 ARCHITECTURE_STAGE_NAME = "generate_architecture_summary"
+HISTORICAL_INTELLIGENCE_STAGE_NAME = "build_historical_intelligence"
 
 STAGE_DEFINITIONS = (
     (METADATA_STAGE_NAME, 0, 15),
@@ -70,6 +72,7 @@ STAGE_DEFINITIONS = (
     (SUBSYSTEM_ENRICHMENT_STAGE_NAME, 17, 99),
     (SUBSYSTEM_GRAPH_STAGE_NAME, 18, 99),
     (ARCHITECTURE_STAGE_NAME, 19, 99),
+    (HISTORICAL_INTELLIGENCE_STAGE_NAME, 20, 99),
 )
 
 
@@ -200,6 +203,7 @@ class GitHubIngestionProcessor:
         subsystem_enrichment_builder: SubsystemEnrichmentBuilder,
         subsystem_graph_builder: SubsystemGraphBuilder,
         architecture_builder: ArchitectureBuilder,
+        historical_intelligence_builder: HistoricalIntelligenceBuilder,
         limits: GitHubIngestionLimits,
     ) -> None:
         self.session = session
@@ -222,6 +226,7 @@ class GitHubIngestionProcessor:
         self.subsystem_enrichment_builder = subsystem_enrichment_builder
         self.subsystem_graph_builder = subsystem_graph_builder
         self.architecture_builder = architecture_builder
+        self.historical_intelligence_builder = historical_intelligence_builder
         self.limits = limits
 
     async def process(self, ingestion_job: IngestionJob) -> None:
@@ -688,6 +693,20 @@ class GitHubIngestionProcessor:
             ingestion_stage=stages[ARCHITECTURE_STAGE_NAME],
             completed_progress=99,
             action=architecture_action,
+        )
+
+        async def historical_intelligence_action() -> dict[str, object]:
+            summary = await self.historical_intelligence_builder.build(
+                repository_id=repository.id,
+                repository_version_id=repository_version.id,
+            )
+            return cast(dict[str, object], asdict(summary))
+
+        await self._run_stage(
+            ingestion_job=ingestion_job,
+            ingestion_stage=stages[HISTORICAL_INTELLIGENCE_STAGE_NAME],
+            completed_progress=99,
+            action=historical_intelligence_action,
         )
 
     async def _ensure_stages(self, ingestion_job: IngestionJob) -> dict[str, IngestionStage]:

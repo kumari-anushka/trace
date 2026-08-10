@@ -114,6 +114,11 @@ Exit gate:
 
 ## Week 5 — Historical Intelligence and Ask
 
+Status: complete for the MVP scope. Deterministic decision evidence chains, explainable
+contributor scoring, hybrid repository retrieval, a citation-verified LangGraph Ask workflow,
+and the Decisions, Contributors, Explore, and Ask surfaces are implemented. See
+[`week-5-intelligence.md`](week-5-intelligence.md) for the evidence gates and limitations.
+
 Build:
 
 - decision candidate generation
@@ -135,6 +140,11 @@ Exit gate:
 - weak evidence handled safely
 
 ## Week 6 — Evaluation and Release
+
+Status: complete for a reproducible local portfolio release. The fixed-snapshot development
+benchmark, desktop/mobile Playwright flows, automated accessibility checks, demo script, and
+release limitations are documented in [`week-6-release.md`](week-6-release.md). Public hosting and
+the broader multi-repository study remain post-MVP work.
 
 Build:
 

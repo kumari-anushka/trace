@@ -20,6 +20,7 @@ export function Header() {
           href="https://github.com/kumari-anushka/trace"
           target="_blank"
           rel="noreferrer"
+          aria-label="Trace on GitHub"
         >
           <FaGithub size={18} aria-hidden="true" />
           <span>GitHub</span>

@@ -9,7 +9,7 @@ POSTGRES_PASSWORD ?= trace
 TEST_DATABASE_URL ?= postgresql+psycopg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:5432/$(POSTGRES_DB)
 TEST_REDIS_URL ?= redis://localhost:6379/0
 
-.PHONY: help setup hooks infra migrate dev backend-dev frontend-dev test test-backend test-frontend lint lint-backend lint-frontend format docker-build down
+.PHONY: help setup hooks infra migrate dev backend-dev frontend-dev test test-backend test-frontend e2e evaluate lint lint-backend lint-frontend format docker-build down
 
 help:
 	@echo "Trace development commands"
@@ -21,6 +21,8 @@ help:
 	@echo "  make frontend-dev   Run the frontend locally"
 	@echo "  make dev            Run the complete stack in Docker"
 	@echo "  make test           Run backend tests and build the frontend"
+	@echo "  make e2e            Run desktop/mobile browser and accessibility checks"
+	@echo "  make evaluate       Evaluate retrieval baselines on the Trace development set"
 	@echo "  make lint           Run all formatting, lint, and type checks"
 	@echo "  make format         Format backend and frontend source"
 	@echo "  make docker-build   Build production container targets"
@@ -29,6 +31,7 @@ help:
 setup:
 	cd backend && uv sync --frozen
 	npm --prefix frontend ci
+	cd frontend && npx playwright install chromium
 	uv tool install pre-commit
 	uv tool run pre-commit install
 
@@ -58,6 +61,13 @@ test-backend:
 
 test-frontend:
 	npm --prefix frontend run build
+	npm --prefix frontend run e2e
+
+e2e:
+	npm --prefix frontend run e2e
+
+evaluate:
+	cd backend && DATABASE_URL="$(TEST_DATABASE_URL)" REDIS_URL="$(TEST_REDIS_URL)" EMBEDDING_PROVIDER=local OPENAI_ASK_ENABLED=false uv run python -m scripts.evaluate_retrieval ../evaluation/datasets/trace-dev-v1.json --output ../evaluation/results/trace-dev-v1.json --chart ../evaluation/results/trace-dev-v1.svg -k 10
 
 lint: lint-backend lint-frontend
 

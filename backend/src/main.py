@@ -22,6 +22,10 @@ async def lifespan(
         timeout=httpx.Timeout(10.0),
         follow_redirects=False,
     )
+    openai_http_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(settings.openai_timeout_seconds),
+        follow_redirects=False,
+    )
 
     redis_client = Redis.from_url(
         settings.redis_url,
@@ -29,12 +33,14 @@ async def lifespan(
     )
 
     app.state.github_http_client = github_http_client
+    app.state.openai_http_client = openai_http_client
     app.state.redis_client = redis_client
 
     try:
         yield
     finally:
         await github_http_client.aclose()
+        await openai_http_client.aclose()
         await redis_client.aclose()
 
 

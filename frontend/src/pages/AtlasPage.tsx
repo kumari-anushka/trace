@@ -9,6 +9,7 @@ import {
   FileSearch,
   GitCommitHorizontal,
   GitPullRequest,
+  Lightbulb,
   Network,
   RefreshCw,
   Rocket,
@@ -31,13 +32,23 @@ import {
   useAtlasGraph,
 } from "../features/atlas/hooks/useAtlas";
 import { GraphCanvas } from "../features/graph/components/GraphCanvas";
-import type { GraphEdge, GraphNode } from "../features/graph/graph.types";
+import type {
+  GraphEdge,
+  GraphMetric,
+  GraphNode,
+} from "../features/graph/graph.types";
 import {
   useRepository,
   useRepositoryVersions,
 } from "../features/repositories/hooks/useRepositories";
 
-export type AtlasView = "overview" | "architecture" | "subsystems" | "timeline";
+export type AtlasView =
+  | "overview"
+  | "architecture"
+  | "subsystems"
+  | "timeline"
+  | "decisions"
+  | "contributors";
 
 type AtlasPageProps = { view: AtlasView };
 
@@ -117,6 +128,14 @@ export function AtlasPage({ view }: AtlasPageProps) {
         ),
     [graph],
   );
+  const decisions = useMemo(
+    () => graph?.nodes.filter((node) => node.entity_type === "decision") ?? [],
+    [graph],
+  );
+  const people = useMemo(
+    () => graph?.nodes.filter((node) => node.entity_type === "person") ?? [],
+    [graph],
+  );
   const repositoryNotFound =
     axios.isAxiosError(repositoryQuery.error) &&
     repositoryQuery.error.response?.status === 404;
@@ -143,13 +162,20 @@ export function AtlasPage({ view }: AtlasPageProps) {
       "Inspect confirmed clusters and cautious candidates.",
     ],
     timeline: ["Timeline", "Follow the repository's recorded evolution."],
+    decisions: [
+      "Decisions",
+      "See what changed, why it changed, and the evidence behind it.",
+    ],
+    contributors: [
+      "Contributors",
+      "Find people with relevant repository context—not inferred owners.",
+    ],
   };
 
   return (
     <div className="app-shell atlas-shell">
       <Header />
       <main className="atlas-page">
-        <div className="atlas-page__grid" aria-hidden="true" />
         <PageContainer>
           <Link
             className="atlas-back"
@@ -188,17 +214,19 @@ export function AtlasPage({ view }: AtlasPageProps) {
             <div className="atlas-content">
               <header className="atlas-hero">
                 <div>
-                  <p>{titles[view][0]}</p>
-                  <h1>{titles[view][1]}</h1>
-                  <span>
+                  <p>
                     {repositoryQuery.data.owner}/{repositoryQuery.data.name}
-                    {latestVersion
-                      ? ` · ${latestVersion.commit_sha.slice(0, 8)}`
-                      : ""}
-                  </span>
+                  </p>
+                  <h1>{titles[view][0]}</h1>
+                  <span>{titles[view][1]}</span>
                 </div>
-                {repositoryId ? <AtlasNav repositoryId={repositoryId} /> : null}
+                {latestVersion ? (
+                  <code title={latestVersion.commit_sha}>
+                    Snapshot {latestVersion.commit_sha.slice(0, 8)}
+                  </code>
+                ) : null}
               </header>
+              {repositoryId ? <AtlasNav repositoryId={repositoryId} /> : null}
 
               {graph?.nodes_truncated || graph?.edges_truncated ? (
                 <p className="atlas-partial" role="status">
@@ -242,12 +270,16 @@ export function AtlasPage({ view }: AtlasPageProps) {
                   subsystemId={subsystemId}
                   onEvidence={setSelection}
                 />
-              ) : (
+              ) : view === "timeline" ? (
                 <Timeline
                   events={events}
                   edges={graph?.edges ?? []}
                   onEvidence={setSelection}
                 />
+              ) : view === "decisions" ? (
+                <Decisions decisions={decisions} onEvidence={setSelection} />
+              ) : (
+                <Contributors people={people} metrics={graph?.metrics ?? []} />
               )}
             </div>
           ) : null}
@@ -284,12 +316,15 @@ function Overview({
   );
   return (
     <div className="atlas-overview">
-      <section className="atlas-summary-card">
+      <section className="atlas-summary-bar">
         <div>
+          <ShieldCheck size={17} aria-hidden="true" />
           <span>
-            <ShieldCheck size={17} aria-hidden="true" /> Evidence-backed summary
+            <strong>Analysis ready</strong>
+            <small>
+              Every displayed inference links back to stored evidence.
+            </small>
           </span>
-          <h2>{summary.description}</h2>
         </div>
         <button
           type="button"
@@ -300,7 +335,7 @@ function Overview({
             })
           }
         >
-          Inspect evidence <ArrowRight size={15} aria-hidden="true" />
+          Evidence <ArrowRight size={15} aria-hidden="true" />
         </button>
       </section>
       <section className="atlas-stat-grid" aria-label="Atlas facts">
@@ -319,25 +354,20 @@ function Overview({
           value={confirmed.length}
           icon={<Boxes />}
         />
-        <Stat
-          label="External dependencies"
-          value={number(summary.metadata.external_dependency_count)}
-          icon={<Box />}
-        />
       </section>
       <div className="atlas-overview-grid">
         <section className="atlas-panel">
           <header>
             <div>
               <p>Components</p>
-              <h2>Subsystem health</h2>
+              <h2>Confirmed subsystems</h2>
             </div>
             <Link to={`/repositories/${repositoryId}/subsystems`}>
               View all <ArrowRight size={14} />
             </Link>
           </header>
-          {subsystems.length ? (
-            subsystems.slice(0, 5).map((node) => (
+          {confirmed.length ? (
+            confirmed.slice(0, 4).map((node) => (
               <Link
                 className="atlas-row"
                 key={node.id}
@@ -357,7 +387,7 @@ function Overview({
               </Link>
             ))
           ) : (
-            <InlineEmpty text="No subsystem candidates were supported by enough signals." />
+            <InlineEmpty text="No subsystem has passed the confirmation threshold. Candidates remain in the Subsystems view." />
           )}
         </section>
         <section className="atlas-panel">
@@ -371,7 +401,7 @@ function Overview({
             </Link>
           </header>
           {events.length ? (
-            events.slice(0, 5).map((node) => (
+            events.slice(0, 4).map((node) => (
               <article className="atlas-row" key={node.id}>
                 <span>{eventIcon(node.entity_type)}</span>
                 <div>
@@ -804,7 +834,7 @@ function Timeline({
   return (
     <section className="timeline">
       <div className="timeline__rail" aria-hidden="true" />
-      {events.map((node) => {
+      {events.slice(0, 30).map((node) => {
         const relatedEdge = edges.find(
           (edge) =>
             edge.source_node_id === node.id || edge.target_node_id === node.id,
@@ -853,6 +883,220 @@ function Timeline({
         );
       })}
     </section>
+  );
+}
+
+function Decisions({
+  decisions,
+  onEvidence,
+}: {
+  decisions: GraphNode[];
+  onEvidence: (value: EvidenceSelection) => void;
+}) {
+  const confirmed = decisions.filter(
+    (node) => node.metadata.status === "confirmed",
+  );
+  const nearby = decisions.filter(
+    (node) => node.metadata.status !== "confirmed",
+  );
+  if (!decisions.length) {
+    return (
+      <AtlasEmpty
+        title="No supported decisions yet"
+        body="Trace found no artifact chain strong enough to present as a repository decision."
+      />
+    );
+  }
+  return (
+    <div className="decision-view">
+      <div className="atlas-section-heading">
+        <div>
+          <p>Verified history</p>
+          <h2>Confirmed decisions</h2>
+        </div>
+        <span>{confirmed.length}</span>
+      </div>
+      {confirmed.length ? (
+        <div className="decision-list">
+          {confirmed.map((decision) => {
+            const affectedFiles = records(decision.metadata.affected_files);
+            const affectedSubsystems = records(
+              decision.metadata.affected_subsystems,
+            );
+            const sourceUrl = text(decision.metadata.source_url);
+            return (
+              <article className="decision-card" key={decision.id}>
+                <header>
+                  <div>
+                    <span>
+                      <Lightbulb size={15} aria-hidden="true" /> Confirmed
+                    </span>
+                    <h2>
+                      {text(decision.metadata.selected_choice, decision.name)}
+                    </h2>
+                  </div>
+                  <ConfidenceBadge confidence={decision.confidence} />
+                </header>
+                <dl>
+                  <div>
+                    <dt>Context</dt>
+                    <dd>
+                      {text(
+                        decision.metadata.context,
+                        decision.description ?? "",
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Outcome</dt>
+                    <dd>
+                      {text(
+                        decision.metadata.outcome,
+                        "Recorded in repository history.",
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+                {affectedSubsystems.length ? (
+                  <div
+                    className="decision-tags"
+                    aria-label="Affected subsystems"
+                  >
+                    {affectedSubsystems.map((item) => (
+                      <span key={text(item.id)}>{text(item.name)}</span>
+                    ))}
+                  </div>
+                ) : null}
+                <footer>
+                  <small>{affectedFiles.length} affected files</small>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onEvidence({
+                          title: decision.name,
+                          nodeId: decision.id,
+                        })
+                      }
+                    >
+                      <FileSearch size={14} /> Evidence
+                    </button>
+                    {sourceUrl ? (
+                      <a href={sourceUrl} target="_blank" rel="noreferrer">
+                        GitHub <ArrowRight size={13} />
+                      </a>
+                    ) : null}
+                  </div>
+                </footer>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <InlineEmpty text="No candidate passed the non-model evidence gate." />
+      )}
+      {nearby.length ? (
+        <details className="nearby-decisions">
+          <summary>
+            {nearby.length} nearby change{nearby.length === 1 ? "" : "s"} with
+            incomplete evidence
+          </summary>
+          <p>
+            These are context clues, not confirmed decisions. They are kept
+            separate to avoid overstating the repository history.
+          </p>
+          <ul>
+            {nearby.map((decision) => (
+              <li key={decision.id}>
+                <span>{decision.name}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onEvidence({ title: decision.name, nodeId: decision.id })
+                  }
+                >
+                  Inspect evidence
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function Contributors({
+  people,
+  metrics,
+}: {
+  people: GraphNode[];
+  metrics: GraphMetric[];
+}) {
+  const scores = metrics
+    .filter((metric) => metric.metric_name === "contributor_activity_score")
+    .map((metric) => ({
+      metric,
+      person: people.find((person) => person.id === metric.node_id),
+    }))
+    .filter(
+      (item): item is { metric: GraphMetric; person: GraphNode } =>
+        item.person !== undefined,
+    )
+    .sort((left, right) => right.metric.value - left.metric.value);
+  if (!scores.length) {
+    return (
+      <AtlasEmpty
+        title="No contributor signals yet"
+        body="The bounded history contains no authored pull requests, reviews, or commits that can be scored."
+      />
+    );
+  }
+  return (
+    <div className="contributor-view">
+      <p className="atlas-caution">
+        Activity scores summarize the ingested history. They suggest useful
+        context, not code ownership or availability.
+      </p>
+      <section className="contributor-table" aria-label="Contributor activity">
+        <header>
+          <span>Contributor</span>
+          <span>Repository signals</span>
+          <span>Activity</span>
+        </header>
+        {scores.map(({ metric, person }, index) => {
+          const raw =
+            typeof metric.metadata.raw_components === "object" &&
+            metric.metadata.raw_components !== null
+              ? (metric.metadata.raw_components as Record<string, unknown>)
+              : {};
+          const subsystems = records(metric.metadata.active_subsystems);
+          return (
+            <article key={metric.id}>
+              <div className="contributor-identity">
+                <span>{index + 1}</span>
+                <div>
+                  <strong>{person.name}</strong>
+                  <small>{text(metric.metadata.description)}</small>
+                </div>
+              </div>
+              <div className="contributor-signals">
+                <span>{number(raw.authored_pull_requests)} PRs</span>
+                <span>{number(raw.reviews)} reviews</span>
+                <span>{number(raw.commits)} commits</span>
+                {subsystems[0] ? <span>{text(subsystems[0].name)}</span> : null}
+              </div>
+              <div className="contributor-score">
+                <strong>{Math.round(metric.value * 100)}</strong>
+                <span aria-hidden="true">
+                  <i style={{ width: `${Math.round(metric.value * 100)}%` }} />
+                </span>
+              </div>
+            </article>
+          );
+        })}
+      </section>
+    </div>
   );
 }
 

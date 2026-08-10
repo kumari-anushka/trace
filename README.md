@@ -58,9 +58,9 @@ Every inferred result must include:
 - React
 - TypeScript
 - Vite
-- Tailwind CSS
+- responsive CSS design system
 - Cytoscape.js
-- react-chartjs-2
+- Playwright + axe-core
 
 **Backend**
 
@@ -152,6 +152,14 @@ Common checks:
 ```bash
 make test
 make lint
+make e2e
+```
+
+Run the fixed-snapshot retrieval benchmark after ingesting the Trace development
+snapshot listed in `evaluation/datasets/trace-dev-v1.json`:
+
+```bash
+make evaluate
 ```
 
 The backend test suite includes an isolated integration test that uses the
@@ -175,6 +183,7 @@ make down
 - [`docs/evaluation.md`](docs/evaluation.md)
 - [`docs/ux.md`](docs/ux.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
+- [`docs/week-6-release.md`](docs/week-6-release.md)
 
 ## Research Question
 
@@ -182,4 +191,5 @@ make down
 
 ## Status
 
-Under active development.
+MVP feature-complete for a reproducible local portfolio release. The development
+evaluation is intentionally small; broader multi-repository evaluation remains future work.

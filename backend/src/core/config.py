@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_subsystem_enrichment_enabled: bool = False
     openai_subsystem_model: str = "gpt-5.6-sol"
+    openai_ask_enabled: bool = False
+    openai_ask_model: str = "gpt-5.6-sol"
+    openai_ask_max_output_tokens: int = 1600
     openai_embedding_model: str = "text-embedding-3-small"
     openai_max_output_tokens: int = 800
     openai_max_retries: int = 2
@@ -85,7 +88,7 @@ class Settings(BaseSettings):
             raise ValueError("embedding_provider must be local or openai")
         return normalized
 
-    @field_validator("openai_subsystem_model", "openai_embedding_model")
+    @field_validator("openai_subsystem_model", "openai_ask_model", "openai_embedding_model")
     @classmethod
     def validate_openai_model(cls, value: str) -> str:
         normalized = value.strip()
@@ -93,7 +96,7 @@ class Settings(BaseSettings):
             raise ValueError("OpenAI model settings cannot be empty")
         return normalized
 
-    @field_validator("openai_max_output_tokens")
+    @field_validator("openai_max_output_tokens", "openai_ask_max_output_tokens")
     @classmethod
     def validate_openai_max_output_tokens(cls, value: int) -> int:
         if value < 1:
@@ -116,9 +119,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_openai_enrichment_configuration(self) -> "Settings":
-        if (self.openai_subsystem_enrichment_enabled or self.embedding_provider == "openai") and (
-            not self.openai_api_key or not self.openai_api_key.strip()
-        ):
+        if (
+            self.openai_subsystem_enrichment_enabled
+            or self.openai_ask_enabled
+            or self.embedding_provider == "openai"
+        ) and (not self.openai_api_key or not self.openai_api_key.strip()):
             raise ValueError("openai_api_key is required when an OpenAI provider is enabled")
         return self
 
